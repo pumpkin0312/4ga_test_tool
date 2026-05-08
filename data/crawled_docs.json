@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://docs.4gaboards.com/docs/intro/",
+    "path": "/docs/intro/",
+    "title": "Getting started",
+    "content": "On this page\nHello! This guide aims to provide a comprehensive tutorial for you to get started with 4ga Boards. In the upcoming sections we will show you all of the important features of our tool.\nWhat exactly is 4ga Boards?\nâ\n4ga Boards is a convienient and easy to grasp management tool based on the kanban board technique. A kanban board is a visual tool used to manage and optimize workflows, which displays tasks as cards across columns that can represent different stages of a process. The main view of 4ga Boards, which you will probably see for the most time can be seen below.\nCreating an account\nâ\nThis section will guide you through creating your account in 4ga Boards.\nStructure\nâ\nThis section aims to present the logical structure of organizing the workflow with 4ga Boards.\n4ga Boards is using a four-level structure to help you maintain even the most complicated projects:\nProject\nis a highest level of organization in 4ga Boards, a container holding boards.\nBoard\nis a workspace within a project where tasks are organized and displayed using:\nList View\n, where tasks are displayed in a to-do list style,\nBoard View\n, which is a classic Kanban view with lists and cards.\nList\nis a column on the board representing different stages or categories of the workflow (e.g. \"To Do\", \"Doing\"), with tasks attached to it.\nCard\nis representing individual task (with optional subtasks) that can be moved across lists.\nEach of the levels is thoroughly explained in the respective sections.\nSidebar\nallows for efficient management of 4ga Boards program elements.\nAdministration and Settings\nâ\nHere you will find explanation of all different features in the settings sections and administration panel.\nFor each user:\nSettings\nwill show you your personal settings.\nFor project managers:\nProject settings\nwill guide you through settings of projects inside your instance\nFor administrators:\nInstance settings\nwill explain the settings of the instance (e.g. demo.4gaboards.com)\nAdditional Information\nâ\nYou should be able to find all the missing information from the previous chapters here, including FAQ.\nIf you have any further problems, feel free to\ncontact us\n.\nAnd if you don't have any troubles, or you simply love using our tool, consider starring us at:\n4ga Boards Github\nWhat exactly is 4ga Boards?\nCreating an account\nStructure\nAdministration and Settings\nAdditional Information"
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/user-manual/",
+    "path": "/docs/user-manual/",
+    "title": "For Users",
+    "content": "ðï¸\nStructure Overview\nThis section aims to present the logical structure of organizing the workflow with 4ga Boards.\nðï¸\nProject\nProjects are the highest structure of 4ga boards workflow. All of the projects can be accessed from the dashboard view (3) or using the sidebar (2).\nðï¸\nBoard: General\nThe heart of 4ga Boards is, unsuprisingly, a board. Board view is the main view of this app - you will spend here most of your time. Don't worry! It's easy to grasp.\nðï¸\nBoard: Board View\nA classic Kanban board view, with lists and cards.\nðï¸\nBoard: List View\nList View is a special view in 4ga Boards that lets you see all your tasks in a convenient to-do list style. Both views are interchangeable â all changes stay in sync, whether you make them in the board or list view.\nðï¸\nList\nIn 4ga Boards, lists are columns on the board representing different stages or categories of the workflow. For example, kanban board template comes with 5 empty lists:\nðï¸\nCard\nThis section shows all of the possible actions that can be performed with a card, including labelling, notifications and extensive tutorial on description text editor.\nðï¸\nSidebar\nAll the time while using the 4ga Boards you can use the sidebar. It let's you quickly manage and navigate thorough your projects and boards. Here is how it looks like:\nðï¸\nNotifications\n4ga Boards features a comprehensive notifications sytem, consisting of two main modules: Notification Center and Check Activity Log\nðï¸\nUser Settings\nThe personal and general settings panel looks like this:\nðï¸\nViews Description\n1. Dashboard view\nðï¸\nUseful Shortcuts\nThis page presents shortcuts that helps you use 4ga Boards more effectively."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/user-manual/registration/",
+    "path": "/docs/user-manual/registration/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/user-manual/structure/",
+    "path": "/docs/user-manual/structure/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/user-manual/lists/",
+    "path": "/docs/user-manual/lists/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/user-manual/cards/",
+    "path": "/docs/user-manual/cards/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/user-manual/sidebar/",
+    "path": "/docs/user-manual/sidebar/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/user-manual/settings/",
+    "path": "/docs/user-manual/settings/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/admin-guide/",
+    "path": "/docs/admin-guide/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/admin-guide/instance-settings/",
+    "path": "/docs/admin-guide/instance-settings/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/admin-guide/project-settings/",
+    "path": "/docs/admin-guide/project-settings/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  },
+  {
+    "url": "https://docs.4gaboards.com/docs/faq/",
+    "path": "/docs/faq/",
+    "title": "Page Not Found",
+    "content": "Page Not Found\nWe could not find what you were looking for.\nPlease contact the owner of the site that linked you to the original URL and let them know their link is broken."
+  }
+]

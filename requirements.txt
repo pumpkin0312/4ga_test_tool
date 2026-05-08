@@ -1,0 +1,24 @@
+# LLM API (GLM via OpenAI-compatible endpoint)
+openai>=1.40.0
+
+# Web UI
+streamlit>=1.35.0
+plotly>=5.22.0
+
+# RAG: embedding + vector store
+sentence-transformers>=3.0.0
+faiss-cpu>=1.8.0
+
+# Documentation crawling
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.2.0
+
+# Browser automation
+playwright>=1.44.0
+
+# Data models and utilities
+pydantic>=2.7.0
+python-dotenv>=1.0.0
+rich>=13.7.0
+pandas>=2.2.0

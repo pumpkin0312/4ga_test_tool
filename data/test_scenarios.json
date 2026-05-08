@@ -1,0 +1,1949 @@
+[
+  {
+    "id": "f001_s01",
+    "name": "通过仪表板创建新项目",
+    "feature_id": "f001",
+    "priority": "high",
+    "precondition": "用户已登录并处于仪表板视图",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Create new project",
+        "value": "",
+        "description": "点击仪表板上的创建新项目按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[name='name']",
+        "value": "Test Project",
+        "description": "输入项目名称"
+      },
+      {
+        "action": "click",
+        "target": "Create",
+        "value": "",
+        "description": "点击创建按钮确认"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text='Test Project'",
+        "value": "",
+        "description": "验证新项目已创建并显示在仪表板"
+      }
+    ],
+    "tags": [
+      "project",
+      "dashboard",
+      "happy-path"
+    ]
+  },
+  {
+    "id": "f001_s02",
+    "name": "通过侧边栏创建新项目",
+    "feature_id": "f001",
+    "priority": "medium",
+    "precondition": "用户已登录并处于任意视图",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Projects",
+        "value": "",
+        "description": "点击侧边栏中的项目部分"
+      },
+      {
+        "action": "click",
+        "target": "Add Project",
+        "value": "",
+        "description": "点击添加项目按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[name='name']",
+        "value": "Sidebar Project",
+        "description": "输入项目名称"
+      },
+      {
+        "action": "click",
+        "target": "Create",
+        "value": "",
+        "description": "点击创建按钮确认"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text='Sidebar Project'",
+        "value": "",
+        "description": "验证新项目已创建并显示在侧边栏"
+      }
+    ],
+    "tags": [
+      "project",
+      "sidebar",
+      "happy-path"
+    ]
+  },
+  {
+    "id": "f001_s03",
+    "name": "创建项目时取消操作",
+    "feature_id": "f001",
+    "priority": "low",
+    "precondition": "用户已登录并处于仪表板视图",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Create new project",
+        "value": "",
+        "description": "点击仪表板上的创建新项目按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[name='name']",
+        "value": "Cancelled Project",
+        "description": "输入项目名称"
+      },
+      {
+        "action": "click",
+        "target": "Cancel",
+        "value": "",
+        "description": "点击取消按钮放弃创建"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "not_visible",
+        "target": "text='Cancelled Project'",
+        "value": "",
+        "description": "验证项目未被创建"
+      }
+    ],
+    "tags": [
+      "project",
+      "cancel",
+      "negative-path"
+    ]
+  },
+  {
+    "id": "f002_s01",
+    "name": "从仪表板访问项目",
+    "feature_id": "f002",
+    "priority": "high",
+    "precondition": "用户已登录并拥有至少一个项目",
+    "steps": [
+      {
+        "action": "navigate",
+        "target": "https://demo.4gaboards.com",
+        "value": "",
+        "description": "导航到应用首页"
+      },
+      {
+        "action": "click",
+        "target": "Dashboard",
+        "value": "",
+        "description": "点击仪表板导航"
+      },
+      {
+        "action": "click",
+        "target": "Project Card",
+        "value": "",
+        "description": "点击项目卡片"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "url_contains",
+        "target": "/board",
+        "value": "",
+        "description": "URL应包含/board路径"
+      },
+      {
+        "condition": "visible",
+        "target": "Board View",
+        "value": "",
+        "description": "看板视图应可见"
+      }
+    ],
+    "tags": [
+      "dashboard",
+      "project"
+    ]
+  },
+  {
+    "id": "f002_s02",
+    "name": "从侧边栏访问项目",
+    "feature_id": "f002",
+    "priority": "high",
+    "precondition": "用户已登录并拥有至少一个项目",
+    "steps": [
+      {
+        "action": "navigate",
+        "target": "https://demo.4gaboards.com",
+        "value": "",
+        "description": "导航到应用首页"
+      },
+      {
+        "action": "click",
+        "target": "Sidebar",
+        "value": "",
+        "description": "打开侧边栏"
+      },
+      {
+        "action": "click",
+        "target": "Project Name",
+        "value": "",
+        "description": "点击项目名称"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "url_contains",
+        "target": "/board",
+        "value": "",
+        "description": "URL应包含/board路径"
+      },
+      {
+        "condition": "visible",
+        "target": "Board View",
+        "value": "",
+        "description": "看板视图应可见"
+      }
+    ],
+    "tags": [
+      "sidebar",
+      "project"
+    ]
+  },
+  {
+    "id": "f002_s03",
+    "name": "验证项目列表显示",
+    "feature_id": "f002",
+    "priority": "medium",
+    "precondition": "用户已登录并拥有多个项目",
+    "steps": [
+      {
+        "action": "navigate",
+        "target": "https://demo.4gaboards.com",
+        "value": "",
+        "description": "导航到应用首页"
+      },
+      {
+        "action": "click",
+        "target": "Dashboard",
+        "value": "",
+        "description": "点击仪表板导航"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "count_greater_than",
+        "target": "Project Card",
+        "value": "1",
+        "description": "应显示多个项目卡片"
+      },
+      {
+        "condition": "visible",
+        "target": "All Projects",
+        "value": "",
+        "description": "所有项目区域应可见"
+      }
+    ],
+    "tags": [
+      "dashboard",
+      "project-list"
+    ]
+  },
+  {
+    "id": "f003_s01",
+    "name": "成功创建新看板",
+    "feature_id": "f003",
+    "priority": "high",
+    "precondition": "用户已登录并位于仪表板页面",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Create new board",
+        "value": "",
+        "description": "点击仪表板上的『创建新看板』按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[name='boardName']",
+        "value": "Test Board",
+        "description": "输入看板名称"
+      },
+      {
+        "action": "click",
+        "target": "Create",
+        "value": "",
+        "description": "点击创建按钮确认创建"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text='Test Board'",
+        "value": "",
+        "description": "验证新创建的看板名称显示在页面上"
+      },
+      {
+        "condition": "url_contains",
+        "target": "",
+        "value": "board",
+        "description": "验证URL中包含board参数"
+      }
+    ],
+    "tags": [
+      "happy path",
+      "board creation"
+    ]
+  },
+  {
+    "id": "f003_s02",
+    "name": "创建看板时取消操作",
+    "feature_id": "f003",
+    "priority": "medium",
+    "precondition": "用户已登录并位于仪表板页面",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Create new board",
+        "value": "",
+        "description": "点击仪表板上的『创建新看板』按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[name='boardName']",
+        "value": "Cancelled Board",
+        "description": "输入看板名称"
+      },
+      {
+        "action": "click",
+        "target": "Cancel",
+        "value": "",
+        "description": "点击取消按钮放弃创建"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "not_visible",
+        "target": "input[name='boardName']",
+        "value": "",
+        "description": "验证创建看板弹窗已关闭"
+      },
+      {
+        "condition": "not_visible",
+        "target": "text='Cancelled Board'",
+        "value": "",
+        "description": "验证取消后看板未创建成功"
+      }
+    ],
+    "tags": [
+      "cancel",
+      "negative path"
+    ]
+  },
+  {
+    "id": "f004_s01",
+    "name": "从看板视图切换到列表视图",
+    "feature_id": "f004",
+    "priority": "high",
+    "precondition": "用户已登录并进入看板视图",
+    "steps": [
+      {
+        "action": "click",
+        "target": "List View",
+        "value": "",
+        "description": "点击切换到列表视图"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "List View",
+        "value": "",
+        "description": "列表视图应该可见"
+      }
+    ],
+    "tags": [
+      "view_switch"
+    ]
+  },
+  {
+    "id": "f004_s02",
+    "name": "从列表视图切换回看板视图",
+    "feature_id": "f004",
+    "priority": "high",
+    "precondition": "用户已登录并进入列表视图",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Board View",
+        "value": "",
+        "description": "点击切换回看板视图"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "Board View",
+        "value": "",
+        "description": "看板视图应该可见"
+      }
+    ],
+    "tags": [
+      "view_switch"
+    ]
+  },
+  {
+    "id": "f004_s03",
+    "name": "验证视图切换后数据同步",
+    "feature_id": "f004",
+    "priority": "medium",
+    "precondition": "用户已登录并进入看板视图，且看板中有卡片",
+    "steps": [
+      {
+        "action": "click",
+        "target": "List View",
+        "value": "",
+        "description": "切换到列表视图"
+      },
+      {
+        "action": "click",
+        "target": "Board View",
+        "value": "",
+        "description": "切换回看板视图"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "count_greater_than",
+        "target": "card",
+        "value": "0",
+        "description": "看板中应该有卡片显示"
+      }
+    ],
+    "tags": [
+      "data_sync",
+      "view_switch"
+    ]
+  },
+  {
+    "id": "f005_s01",
+    "name": "在现有看板中创建新列表",
+    "feature_id": "f005",
+    "priority": "high",
+    "precondition": "用户已登录并进入一个看板",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Add List",
+        "value": "",
+        "description": "点击添加列表按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[placeholder='Enter list title']",
+        "value": "To Do",
+        "description": "输入列表标题"
+      },
+      {
+        "action": "click",
+        "target": "Add List",
+        "value": "",
+        "description": "点击添加列表按钮确认创建"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text='To Do'",
+        "value": "",
+        "description": "验证新列表已创建并显示"
+      }
+    ],
+    "tags": [
+      "list-management",
+      "kanban"
+    ]
+  },
+  {
+    "id": "f005_s02",
+    "name": "创建多个列表并验证顺序",
+    "feature_id": "f005",
+    "priority": "medium",
+    "precondition": "用户已登录并进入一个空看板",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Add List",
+        "value": "",
+        "description": "点击添加列表按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[placeholder='Enter list title']",
+        "value": "Backlog",
+        "description": "输入第一个列表标题"
+      },
+      {
+        "action": "click",
+        "target": "Add List",
+        "value": "",
+        "description": "点击添加列表按钮确认创建"
+      },
+      {
+        "action": "click",
+        "target": "Add List",
+        "value": "",
+        "description": "再次点击添加列表按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[placeholder='Enter list title']",
+        "value": "In Progress",
+        "description": "输入第二个列表标题"
+      },
+      {
+        "action": "click",
+        "target": "Add List",
+        "value": "",
+        "description": "点击添加列表按钮确认创建"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "count_greater_than",
+        "target": ".list",
+        "value": "1",
+        "description": "验证看板中存在多个列表"
+      },
+      {
+        "condition": "text_contains",
+        "target": "Backlog",
+        "value": "",
+        "description": "验证第一个列表标题正确"
+      },
+      {
+        "condition": "text_contains",
+        "target": "In Progress",
+        "value": "",
+        "description": "验证第二个列表标题正确"
+      }
+    ],
+    "tags": [
+      "list-management",
+      "workflow"
+    ]
+  },
+  {
+    "id": "f005_s03",
+    "name": "创建列表时取消操作",
+    "feature_id": "f005",
+    "priority": "low",
+    "precondition": "用户已登录并进入一个看板",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Add List",
+        "value": "",
+        "description": "点击添加列表按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[placeholder='Enter list title']",
+        "value": "Cancelled List",
+        "description": "输入列表标题"
+      },
+      {
+        "action": "click",
+        "target": "Cancel",
+        "value": "",
+        "description": "点击取消按钮"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "not_visible",
+        "target": "text='Cancelled List'",
+        "value": "",
+        "description": "验证列表未创建"
+      },
+      {
+        "condition": "visible",
+        "target": "Add List",
+        "value": "",
+        "description": "验证添加列表按钮仍然可见"
+      }
+    ],
+    "tags": [
+      "list-management",
+      "cancel-operation"
+    ]
+  },
+  {
+    "id": "f006_s01",
+    "name": "在默认看板创建新卡片",
+    "feature_id": "f006",
+    "priority": "high",
+    "precondition": "已登录系统并进入默认看板",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Add Card",
+        "value": "",
+        "description": "点击列表中的'Add Card'按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[placeholder='Enter a title for this card']",
+        "value": "New Test Card",
+        "description": "输入卡片标题"
+      },
+      {
+        "action": "click",
+        "target": "Save",
+        "value": "",
+        "description": "点击'Save'按钮保存卡片"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text='New Test Card'",
+        "value": "",
+        "description": "验证新卡片已创建并显示在列表中"
+      }
+    ],
+    "tags": [
+      "happy_path"
+    ]
+  },
+  {
+    "id": "f006_s02",
+    "name": "创建带描述的卡片",
+    "feature_id": "f006",
+    "priority": "medium",
+    "precondition": "已登录系统并进入默认看板",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Add Card",
+        "value": "",
+        "description": "点击列表中的'Add Card'按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[placeholder='Enter a title for this card']",
+        "value": "Card with Description",
+        "description": "输入卡片标题"
+      },
+      {
+        "action": "click",
+        "target": "Add a more detailed description...",
+        "value": "",
+        "description": "点击描述区域添加详细描述"
+      },
+      {
+        "action": "input",
+        "target": "textarea[placeholder='Enter a more detailed description...']",
+        "value": "This is a test card with detailed description",
+        "description": "输入卡片详细描述"
+      },
+      {
+        "action": "click",
+        "target": "Save",
+        "value": "",
+        "description": "点击'Save'按钮保存卡片"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text='Card with Description'",
+        "value": "",
+        "description": "验证带描述的卡片已创建"
+      }
+    ],
+    "tags": [
+      "happy_path",
+      "description"
+    ]
+  },
+  {
+    "id": "f006_s03",
+    "name": "创建卡片后取消操作",
+    "feature_id": "f006",
+    "priority": "low",
+    "precondition": "已登录系统并进入默认看板",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Add Card",
+        "value": "",
+        "description": "点击列表中的'Add Card'按钮"
+      },
+      {
+        "action": "input",
+        "target": "input[placeholder='Enter a title for this card']",
+        "value": "Cancelled Card",
+        "description": "输入卡片标题"
+      },
+      {
+        "action": "click",
+        "target": "Cancel",
+        "value": "",
+        "description": "点击'Cancel'按钮取消创建"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "not_visible",
+        "target": "text='Cancelled Card'",
+        "value": "",
+        "description": "验证卡片未被保存，已从列表中消失"
+      }
+    ],
+    "tags": [
+      "cancel",
+      "negative"
+    ]
+  },
+  {
+    "id": "f007_s01",
+    "name": "在同一个看板内移动卡片",
+    "feature_id": "f007",
+    "priority": "high",
+    "precondition": "用户已登录，看板中存在至少两个列表和至少一张卡片",
+    "steps": [
+      {
+        "action": "navigate",
+        "target": "https://demo.4gaboards.com",
+        "value": "",
+        "description": "导航到应用首页"
+      },
+      {
+        "action": "click",
+        "target": "input[name='emailOrUsername']",
+        "value": "",
+        "description": "点击用户名输入框"
+      },
+      {
+        "action": "input",
+        "target": "input[name='emailOrUsername']",
+        "value": "demo@demo.demo",
+        "description": "输入用户名"
+      },
+      {
+        "action": "click",
+        "target": "input[type='password']",
+        "value": "",
+        "description": "点击密码输入框"
+      },
+      {
+        "action": "input",
+        "target": "input[type='password']",
+        "value": "demo",
+        "description": "输入密码"
+      },
+      {
+        "action": "click",
+        "target": "button[type='submit']",
+        "value": "",
+        "description": "点击登录按钮"
+      },
+      {
+        "action": "wait",
+        "target": "text=Dashboard",
+        "value": "",
+        "description": "等待仪表板页面加载"
+      },
+      {
+        "action": "click",
+        "target": "Board",
+        "value": "",
+        "description": "点击看板导航"
+      },
+      {
+        "action": "wait",
+        "target": "text=General",
+        "value": "",
+        "description": "等待看板加载"
+      },
+      {
+        "action": "hover",
+        "target": "text=To Do",
+        "value": "",
+        "description": "悬停在第一个列表上"
+      },
+      {
+        "action": "drag_and_drop",
+        "target": "text=To Do",
+        "value": "text=Done",
+        "description": "将卡片从To Do列表拖到Done列表"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "not_visible",
+        "target": "text=To Do",
+        "value": "",
+        "description": "卡片已不在To Do列表中"
+      },
+      {
+        "condition": "visible",
+        "target": "text=Done",
+        "value": "",
+        "description": "卡片已出现在Done列表中"
+      }
+    ],
+    "tags": [
+      "kanban",
+      "drag_drop"
+    ]
+  },
+  {
+    "id": "f007_s02",
+    "name": "在不同看板间移动卡片",
+    "feature_id": "f007",
+    "priority": "medium",
+    "precondition": "用户已登录，存在多个看板，每个看板中至少有一个列表和一张卡片",
+    "steps": [
+      {
+        "action": "navigate",
+        "target": "https://demo.4gaboards.com",
+        "value": "",
+        "description": "导航到应用首页"
+      },
+      {
+        "action": "click",
+        "target": "input[name='emailOrUsername']",
+        "value": "",
+        "description": "点击用户名输入框"
+      },
+      {
+        "action": "input",
+        "target": "input[name='emailOrUsername']",
+        "value": "demo@demo.demo",
+        "description": "输入用户名"
+      },
+      {
+        "action": "click",
+        "target": "input[type='password']",
+        "value": "",
+        "description": "点击密码输入框"
+      },
+      {
+        "action": "input",
+        "target": "input[type='password']",
+        "value": "demo",
+        "description": "输入密码"
+      },
+      {
+        "action": "click",
+        "target": "button[type='submit']",
+        "value": "",
+        "description": "点击登录按钮"
+      },
+      {
+        "action": "wait",
+        "target": "text=Dashboard",
+        "value": "",
+        "description": "等待仪表板页面加载"
+      },
+      {
+        "action": "click",
+        "target": "Board",
+        "value": "",
+        "description": "点击看板导航"
+      },
+      {
+        "action": "click",
+        "target": "text=General",
+        "value": "",
+        "description": "选择第一个看板"
+      },
+      {
+        "action": "hover",
+        "target": "text=To Do",
+        "value": "",
+        "description": "悬停在第一个列表上"
+      },
+      {
+        "action": "drag_and_drop",
+        "target": "text=To Do",
+        "value": "text=Done",
+        "description": "将卡片从To Do列表拖到Done列表"
+      },
+      {
+        "action": "click",
+        "target": "Board",
+        "value": "",
+        "description": "点击看板导航"
+      },
+      {
+        "action": "click",
+        "target": "text=Marketing",
+        "value": "",
+        "description": "选择第二个看板"
+      },
+      {
+        "action": "hover",
+        "target": "text=Backlog",
+        "value": "",
+        "description": "悬停在Backlog列表上"
+      },
+      {
+        "action": "drag_and_drop",
+        "target": "text=Backlog",
+        "value": "text=In Progress",
+        "description": "将卡片从Backlog列表拖到In Progress列表"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "not_visible",
+        "target": "text=Backlog",
+        "value": "",
+        "description": "卡片已不在Backlog列表中"
+      },
+      {
+        "condition": "visible",
+        "target": "text=In Progress",
+        "value": "",
+        "description": "卡片已出现在In Progress列表中"
+      }
+    ],
+    "tags": [
+      "cross_board",
+      "drag_drop"
+    ]
+  },
+  {
+    "id": "f008_s01",
+    "name": "为卡片添加单个标签",
+    "feature_id": "f008",
+    "priority": "high",
+    "precondition": "已登录系统并存在一个包含卡片的看板",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Card",
+        "value": "",
+        "description": "点击任意卡片打开详情"
+      },
+      {
+        "action": "click",
+        "target": "Add Label",
+        "value": "",
+        "description": "点击添加标签按钮"
+      },
+      {
+        "action": "click",
+        "target": "Bug",
+        "value": "",
+        "description": "选择Bug标签"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "Bug",
+        "value": "",
+        "description": "标签Bug应显示在卡片上"
+      }
+    ],
+    "tags": [
+      "card",
+      "label"
+    ]
+  },
+  {
+    "id": "f008_s02",
+    "name": "为卡片添加多个标签",
+    "feature_id": "f008",
+    "priority": "medium",
+    "precondition": "已登录系统并存在一个包含卡片的看板",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Card",
+        "value": "",
+        "description": "点击任意卡片打开详情"
+      },
+      {
+        "action": "click",
+        "target": "Add Label",
+        "value": "",
+        "description": "点击添加标签按钮"
+      },
+      {
+        "action": "click",
+        "target": "Feature",
+        "value": "",
+        "description": "选择Feature标签"
+      },
+      {
+        "action": "click",
+        "target": "Add Label",
+        "value": "",
+        "description": "再次点击添加标签按钮"
+      },
+      {
+        "action": "click",
+        "target": "High Priority",
+        "value": "",
+        "description": "选择High Priority标签"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "count_greater_than",
+        "target": ".card-label",
+        "value": "1",
+        "description": "卡片上应显示至少2个标签"
+      }
+    ],
+    "tags": [
+      "card",
+      "label",
+      "multiple"
+    ]
+  },
+  {
+    "id": "f008_s03",
+    "name": "移除卡片标签",
+    "feature_id": "f008",
+    "priority": "medium",
+    "precondition": "已登录系统并存在一个已添加标签的卡片",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Card",
+        "value": "",
+        "description": "点击已添加标签的卡片打开详情"
+      },
+      {
+        "action": "click",
+        "target": ".card-label",
+        "value": "",
+        "description": "点击卡片上的标签"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "not_visible",
+        "target": ".card-label",
+        "value": "",
+        "description": "标签应从卡片上消失"
+      }
+    ],
+    "tags": [
+      "card",
+      "label",
+      "remove"
+    ]
+  },
+  {
+    "id": "f009_s01",
+    "name": "为卡片设置通知",
+    "feature_id": "f009",
+    "priority": "high",
+    "precondition": "用户已登录并进入看板视图",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Card",
+        "value": "",
+        "description": "点击任意卡片"
+      },
+      {
+        "action": "click",
+        "target": "Notifications",
+        "value": "",
+        "description": "点击卡片操作菜单中的通知选项"
+      },
+      {
+        "action": "click",
+        "target": "Enable notifications",
+        "value": "",
+        "description": "启用通知开关"
+      },
+      {
+        "action": "click",
+        "target": "Save",
+        "value": "",
+        "description": "保存通知设置"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "Notification settings saved",
+        "value": "",
+        "description": "验证通知设置保存成功提示可见"
+      }
+    ],
+    "tags": [
+      "card",
+      "notification"
+    ]
+  },
+  {
+    "id": "f009_s02",
+    "name": "为卡片禁用通知",
+    "feature_id": "f009",
+    "priority": "medium",
+    "precondition": "用户已登录并进入看板视图，且卡片已启用通知",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Card",
+        "value": "",
+        "description": "点击已启用通知的卡片"
+      },
+      {
+        "action": "click",
+        "target": "Notifications",
+        "value": "",
+        "description": "点击卡片操作菜单中的通知选项"
+      },
+      {
+        "action": "click",
+        "target": "Disable notifications",
+        "value": "",
+        "description": "禁用通知开关"
+      },
+      {
+        "action": "click",
+        "target": "Save",
+        "value": "",
+        "description": "保存通知设置"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "Notification settings updated",
+        "value": "",
+        "description": "验证通知设置更新成功提示可见"
+      }
+    ],
+    "tags": [
+      "card",
+      "notification"
+    ]
+  },
+  {
+    "id": "f009_s03",
+    "name": "验证通知设置持久化",
+    "feature_id": "f009",
+    "priority": "low",
+    "precondition": "用户已登录并进入看板视图，且卡片已设置通知",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Card",
+        "value": "",
+        "description": "点击已设置通知的卡片"
+      },
+      {
+        "action": "click",
+        "target": "Notifications",
+        "value": "",
+        "description": "点击卡片操作菜单中的通知选项"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "Enable notifications",
+        "value": "",
+        "description": "验证通知开关状态已正确保存"
+      }
+    ],
+    "tags": [
+      "card",
+      "notification",
+      "persistence"
+    ]
+  },
+  {
+    "id": "f010_s01",
+    "name": "编辑卡片描述 - 正常流程",
+    "feature_id": "f010",
+    "priority": "high",
+    "precondition": "用户已登录并进入看板视图，存在可编辑的卡片",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Card",
+        "value": "",
+        "description": "点击任意卡片打开详情"
+      },
+      {
+        "action": "click",
+        "target": "Edit description",
+        "value": "",
+        "description": "点击编辑描述按钮"
+      },
+      {
+        "action": "input",
+        "target": "textarea[placeholder='Add a more detailed description...']",
+        "value": "This is the updated card description.",
+        "description": "输入新的描述内容"
+      },
+      {
+        "action": "click",
+        "target": "Save",
+        "value": "",
+        "description": "点击保存按钮"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "text_contains",
+        "target": "This is the updated card description.",
+        "value": "",
+        "description": "验证卡片描述已更新为新内容"
+      },
+      {
+        "condition": "not_visible",
+        "target": "textarea[placeholder='Add a more detailed description...']",
+        "value": "",
+        "description": "验证编辑模式已关闭"
+      }
+    ],
+    "tags": [
+      "happy_path",
+      "card_management"
+    ]
+  },
+  {
+    "id": "f010_s02",
+    "name": "编辑卡片描述 - 清空描述",
+    "feature_id": "f010",
+    "priority": "medium",
+    "precondition": "用户已登录并进入看板视图，存在有描述的卡片",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Card",
+        "value": "",
+        "description": "点击有描述的卡片"
+      },
+      {
+        "action": "click",
+        "target": "Edit description",
+        "value": "",
+        "description": "点击编辑描述按钮"
+      },
+      {
+        "action": "input",
+        "target": "textarea[placeholder='Add a more detailed description...']",
+        "value": "",
+        "description": "清空描述内容"
+      },
+      {
+        "action": "click",
+        "target": "Save",
+        "value": "",
+        "description": "点击保存按钮"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "not_visible",
+        "target": "textarea[placeholder='Add a more detailed description...']",
+        "value": "",
+        "description": "验证编辑模式已关闭"
+      },
+      {
+        "condition": "count_greater_than",
+        "target": ".card-description",
+        "value": "0",
+        "description": "验证卡片描述区域为空"
+      }
+    ],
+    "tags": [
+      "edge_case",
+      "card_management"
+    ]
+  },
+  {
+    "id": "f011_s01",
+    "name": "成功登录并访问仪表板",
+    "feature_id": "f011",
+    "priority": "high",
+    "precondition": "用户已登录系统",
+    "steps": [
+      {
+        "action": "navigate",
+        "target": "https://demo.4gaboards.com",
+        "value": "",
+        "description": "导航到应用首页"
+      },
+      {
+        "action": "input",
+        "target": "input[name='emailOrUsername']",
+        "value": "demo@demo.demo",
+        "description": "输入用户名"
+      },
+      {
+        "action": "input",
+        "target": "input[type='password']",
+        "value": "demo",
+        "description": "输入密码"
+      },
+      {
+        "action": "click",
+        "target": "button[type='submit']",
+        "value": "",
+        "description": "点击登录按钮"
+      },
+      {
+        "action": "wait",
+        "target": "text=Dashboard",
+        "value": "",
+        "description": "等待仪表板页面加载完成"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text=Dashboard",
+        "value": "",
+        "description": "验证仪表板视图可见"
+      },
+      {
+        "condition": "url_contains",
+        "target": "",
+        "value": "dashboard",
+        "description": "验证URL包含dashboard"
+      }
+    ],
+    "tags": [
+      "login",
+      "dashboard"
+    ]
+  },
+  {
+    "id": "f011_s02",
+    "name": "验证仪表板项目概览",
+    "feature_id": "f011",
+    "priority": "medium",
+    "precondition": "用户已登录并处于仪表板视图",
+    "steps": [
+      {
+        "action": "wait",
+        "target": "text=Dashboard",
+        "value": "",
+        "description": "确保仪表板已加载"
+      },
+      {
+        "action": "hover",
+        "target": "text=Create new project",
+        "value": "",
+        "description": "悬停在创建新项目按钮上"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text=Create new project",
+        "value": "",
+        "description": "验证创建新项目按钮可见"
+      },
+      {
+        "condition": "count_greater_than",
+        "target": "text=Project",
+        "value": "0",
+        "description": "验证至少有一个项目显示"
+      }
+    ],
+    "tags": [
+      "dashboard",
+      "project-overview"
+    ]
+  },
+  {
+    "id": "f011_s03",
+    "name": "通过侧边栏导航到仪表板",
+    "feature_id": "f011",
+    "priority": "low",
+    "precondition": "用户已登录并处于其他视图",
+    "steps": [
+      {
+        "action": "click",
+        "target": "text=Dashboard",
+        "value": "",
+        "description": "点击侧边栏中的仪表板链接"
+      },
+      {
+        "action": "wait",
+        "target": "text=Dashboard",
+        "value": "",
+        "description": "等待仪表板视图加载"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "text=Dashboard",
+        "value": "",
+        "description": "验证仪表板视图可见"
+      },
+      {
+        "condition": "url_contains",
+        "target": "",
+        "value": "dashboard",
+        "description": "验证URL包含dashboard"
+      }
+    ],
+    "tags": [
+      "navigation",
+      "sidebar"
+    ]
+  },
+  {
+    "id": "f012_s01",
+    "name": "通过侧边栏导航到项目",
+    "feature_id": "f012",
+    "priority": "high",
+    "precondition": "用户已登录",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Dashboard",
+        "value": "",
+        "description": "点击仪表板视图"
+      },
+      {
+        "action": "click",
+        "target": "Projects",
+        "value": "",
+        "description": "点击侧边栏中的项目链接"
+      },
+      {
+        "action": "click",
+        "target": "Test Project",
+        "value": "",
+        "description": "点击测试项目"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "url_contains",
+        "target": "",
+        "value": "/board",
+        "description": "URL应包含/board路径"
+      },
+      {
+        "condition": "visible",
+        "target": "Board View",
+        "value": "",
+        "description": "看板视图应可见"
+      }
+    ],
+    "tags": [
+      "navigation",
+      "sidebar"
+    ]
+  },
+  {
+    "id": "f012_s02",
+    "name": "通过侧边栏切换视图",
+    "feature_id": "f012",
+    "priority": "medium",
+    "precondition": "用户在看板视图中",
+    "steps": [
+      {
+        "action": "click",
+        "target": "List View",
+        "value": "",
+        "description": "点击侧边栏中的列表视图"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "List View",
+        "value": "",
+        "description": "列表视图应可见"
+      },
+      {
+        "condition": "not_visible",
+        "target": "Board View",
+        "value": "",
+        "description": "看板视图应不可见"
+      }
+    ],
+    "tags": [
+      "view-switch",
+      "sidebar"
+    ]
+  },
+  {
+    "id": "f012_s03",
+    "name": "通过侧边栏访问设置",
+    "feature_id": "f012",
+    "priority": "low",
+    "precondition": "用户已登录",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Settings",
+        "value": "",
+        "description": "点击侧边栏中的设置"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "User Settings",
+        "value": "",
+        "description": "用户设置面板应可见"
+      },
+      {
+        "condition": "url_contains",
+        "target": "",
+        "value": "/settings",
+        "description": "URL应包含/settings路径"
+      }
+    ],
+    "tags": [
+      "settings",
+      "sidebar"
+    ]
+  },
+  {
+    "id": "f013_s01",
+    "name": "从侧边栏访问通知中心",
+    "feature_id": "f013",
+    "priority": "high",
+    "precondition": "用户已登录",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Notifications",
+        "value": "",
+        "description": "点击侧边栏的Notifications链接"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "url_contains",
+        "target": "notifications",
+        "value": "",
+        "description": "URL应包含notifications"
+      },
+      {
+        "condition": "visible",
+        "target": "Notification Center",
+        "value": "",
+        "description": "通知中心页面应可见"
+      }
+    ],
+    "tags": [
+      "regression",
+      "ui"
+    ]
+  },
+  {
+    "id": "f013_s02",
+    "name": "验证通知中心显示系统通知",
+    "feature_id": "f013",
+    "priority": "medium",
+    "precondition": "用户已登录并在通知中心页面",
+    "steps": [
+      {
+        "action": "wait",
+        "target": ".notification-item",
+        "value": "3000",
+        "description": "等待通知加载完成"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "count_greater_than",
+        "target": ".notification-item",
+        "value": "0",
+        "description": "应至少显示一条通知"
+      },
+      {
+        "condition": "visible",
+        "target": "Check Activity Log",
+        "value": "",
+        "description": "活动日志链接应可见"
+      }
+    ],
+    "tags": [
+      "regression",
+      "functionality"
+    ]
+  },
+  {
+    "id": "f013_s03",
+    "name": "从设置菜单访问通知中心",
+    "feature_id": "f013",
+    "priority": "low",
+    "precondition": "用户已登录",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Settings",
+        "value": "",
+        "description": "点击设置按钮"
+      },
+      {
+        "action": "click",
+        "target": "Notifications",
+        "value": "",
+        "description": "点击通知设置选项"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "url_contains",
+        "target": "settings/notifications",
+        "value": "",
+        "description": "URL应包含settings/notifications"
+      },
+      {
+        "condition": "visible",
+        "target": "Notification preferences",
+        "value": "",
+        "description": "通知偏好设置页面应可见"
+      }
+    ],
+    "tags": [
+      "regression",
+      "ui"
+    ]
+  },
+  {
+    "id": "f014_s01",
+    "name": "检查活动日志功能",
+    "feature_id": "f014",
+    "priority": "high",
+    "precondition": "用户已登录系统",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Settings",
+        "value": "",
+        "description": "点击设置菜单"
+      },
+      {
+        "action": "click",
+        "target": "Check Activity Log",
+        "value": "",
+        "description": "点击检查活动日志选项"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "url_contains",
+        "target": "activity",
+        "value": "",
+        "description": "页面URL应包含activity"
+      },
+      {
+        "condition": "visible",
+        "target": "Activity Log",
+        "value": "",
+        "description": "活动日志标题应可见"
+      }
+    ],
+    "tags": [
+      "settings",
+      "activity-log"
+    ]
+  },
+  {
+    "id": "f014_s02",
+    "name": "验证活动日志列表显示",
+    "feature_id": "f014",
+    "priority": "medium",
+    "precondition": "用户在活动日志页面",
+    "steps": [
+      {
+        "action": "wait",
+        "target": "activity-log-item",
+        "value": "",
+        "description": "等待活动日志项加载"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "count_greater_than",
+        "target": "activity-log-item",
+        "value": "0",
+        "description": "活动日志列表应包含至少一项"
+      },
+      {
+        "condition": "visible",
+        "target": "Timestamp",
+        "value": "",
+        "description": "时间戳应可见"
+      }
+    ],
+    "tags": [
+      "activity-log",
+      "display"
+    ]
+  },
+  {
+    "id": "f015_s01",
+    "name": "修改用户偏好设置",
+    "feature_id": "f015",
+    "priority": "high",
+    "precondition": "用户已登录",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Settings",
+        "value": "",
+        "description": "点击设置按钮进入设置页面"
+      },
+      {
+        "action": "click",
+        "target": "User Settings",
+        "value": "",
+        "description": "点击用户设置选项"
+      },
+      {
+        "action": "input",
+        "target": "input[name='name']",
+        "value": "Test User",
+        "description": "修改用户名为Test User"
+      },
+      {
+        "action": "click",
+        "target": "Save",
+        "value": "",
+        "description": "点击保存按钮保存设置"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "text_contains",
+        "target": "Settings",
+        "value": "Settings",
+        "description": "验证设置页面显示成功"
+      },
+      {
+        "condition": "text_contains",
+        "target": "Test User",
+        "value": "Test User",
+        "description": "验证用户名已更新为Test User"
+      }
+    ],
+    "tags": [
+      "settings",
+      "user-preference"
+    ]
+  },
+  {
+    "id": "f015_s02",
+    "name": "配置通知偏好",
+    "feature_id": "f015",
+    "priority": "medium",
+    "precondition": "用户已进入设置页面",
+    "steps": [
+      {
+        "action": "click",
+        "target": "Notifications",
+        "value": "",
+        "description": "点击通知设置选项"
+      },
+      {
+        "action": "click",
+        "target": "Notification Center",
+        "value": "",
+        "description": "点击通知中心选项"
+      },
+      {
+        "action": "click",
+        "target": "Enable notifications",
+        "value": "",
+        "description": "启用通知功能"
+      },
+      {
+        "action": "click",
+        "target": "Save",
+        "value": "",
+        "description": "保存通知设置"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "Notification Center",
+        "value": "",
+        "description": "验证通知中心页面显示成功"
+      },
+      {
+        "condition": "text_contains",
+        "target": "notifications enabled",
+        "value": "notifications enabled",
+        "description": "验证通知已启用"
+      }
+    ],
+    "tags": [
+      "settings",
+      "notifications"
+    ]
+  },
+  {
+    "id": "f015_s03",
+    "name": "重置用户偏好设置",
+    "feature_id": "f015",
+    "priority": "low",
+    "precondition": "用户已进入设置页面",
+    "steps": [
+      {
+        "action": "click",
+        "target": "User Settings",
+        "value": "",
+        "description": "点击用户设置选项"
+      },
+      {
+        "action": "click",
+        "target": "Reset to default",
+        "value": "",
+        "description": "点击重置为默认设置按钮"
+      },
+      {
+        "action": "click",
+        "target": "Confirm",
+        "value": "",
+        "description": "确认重置操作"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "text_contains",
+        "target": "default settings",
+        "value": "default settings",
+        "description": "验证设置已重置为默认值"
+      },
+      {
+        "condition": "visible",
+        "target": "Save",
+        "value": "",
+        "description": "验证保存按钮可见"
+      }
+    ],
+    "tags": [
+      "settings",
+      "reset"
+    ]
+  },
+  {
+    "id": "f016_s01",
+    "name": "使用快捷键创建新项目",
+    "feature_id": "f016",
+    "priority": "high",
+    "precondition": "用户已登录并进入仪表板",
+    "steps": [
+      {
+        "action": "press",
+        "target": "body",
+        "value": "c",
+        "description": "按下快捷键 'c' 打开创建项目对话框"
+      },
+      {
+        "action": "input",
+        "target": "input[name='name']",
+        "value": "Test Project",
+        "description": "输入项目名称"
+      },
+      {
+        "action": "press",
+        "target": "body",
+        "value": "Enter",
+        "description": "按下 Enter 键提交创建"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "[data-testid='project-card']",
+        "value": "",
+        "description": "验证新项目卡片已显示"
+      }
+    ],
+    "tags": [
+      "shortcut",
+      "project"
+    ]
+  },
+  {
+    "id": "f016_s02",
+    "name": "使用快捷键保存更改",
+    "feature_id": "f016",
+    "priority": "medium",
+    "precondition": "用户正在编辑项目信息",
+    "steps": [
+      {
+        "action": "input",
+        "target": "input[name='name']",
+        "value": "Updated Project Name",
+        "description": "修改项目名称"
+      },
+      {
+        "action": "press",
+        "target": "body",
+        "value": "s",
+        "description": "按下快捷键 's' 保存更改"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "text_contains",
+        "target": "[data-testid='project-name']",
+        "value": "Updated Project Name",
+        "description": "验证项目名称已更新"
+      }
+    ],
+    "tags": [
+      "shortcut",
+      "save"
+    ]
+  },
+  {
+    "id": "f016_s03",
+    "name": "使用快捷键打开设置",
+    "feature_id": "f016",
+    "priority": "low",
+    "precondition": "用户在仪表板页面",
+    "steps": [
+      {
+        "action": "press",
+        "target": "body",
+        "value": "Escape",
+        "description": "按下 Escape 键关闭当前模态框（如果有）"
+      },
+      {
+        "action": "press",
+        "target": "body",
+        "value": "Shift+?",
+        "description": "按下 Shift+? 打开快捷键帮助"
+      }
+    ],
+    "expectations": [
+      {
+        "condition": "visible",
+        "target": "[data-testid='shortcut-help']",
+        "value": "",
+        "description": "验证快捷键帮助面板已显示"
+      }
+    ],
+    "tags": [
+      "shortcut",
+      "settings"
+    ]
+  }
+]

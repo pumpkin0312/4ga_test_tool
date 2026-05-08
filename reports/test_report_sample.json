@@ -1,0 +1,293 @@
+[
+  {
+    "scenario_id": "f001_s01",
+    "scenario_name": "通过仪表板创建新项目",
+    "feature_id": "f001",
+    "priority": "high",
+    "result": "PASS",
+    "confidence": 1.0,
+    "summary": "新项目已成功创建并显示在仪表板，验证通过",
+    "issues": [],
+    "suggestions": [],
+    "expectation_results": [
+      {
+        "expectation": "验证新项目已创建并显示在仪表板",
+        "verified": true,
+        "comment": "规则验证实际结果为通过"
+      }
+    ],
+    "steps_total": 5,
+    "steps_passed": 5,
+    "step_success_rate": 1.0,
+    "start_time": "2026-05-08T18:11:46.165835",
+    "end_time": "2026-05-08T18:12:25.635194",
+    "screenshots": [
+      "reports\\screenshots\\step_001_ok.png",
+      "reports\\screenshots\\step_002_login.png",
+      "reports\\screenshots\\step_003_fail.png",
+      "reports\\screenshots\\step_004_ok.png",
+      "reports\\screenshots\\step_005_ok.png"
+    ],
+    "expectations_inline": [
+      {
+        "expectation": "验证新项目已创建并显示在仪表板",
+        "inline_pass": true
+      }
+    ],
+    "logs": [
+      "[18:11:46] 开始执行: 通过仪表板创建新项目",
+      "[18:11:46] 规划完成，共 5 步",
+      "[步骤 1] ✓ 打开目标应用 https://demo.4gaboards.com",
+      "[步骤 2] ✓ 使用账号 demo@demo.demo 登录",
+      "[步骤 3] ✗ 点击仪表板上的创建新项目按钮",
+      "[18:12:17] 备选方案成功: 使用页面中实际显示的'Add Project'按钮替代'Create new project'，因为两者语义相同且该按钮存在于可见文本列表中",
+      "[步骤 4] ✓ 输入项目名称",
+      "[步骤 5] ✓ 点击创建按钮确认",
+      "[18:12:25] 预期验证: 验证新项目已创建并显示在仪表板 → ✓"
+    ]
+  },
+  {
+    "scenario_id": "f001_s02",
+    "scenario_name": "通过侧边栏创建新项目",
+    "feature_id": "f001",
+    "priority": "medium",
+    "result": "PASS",
+    "confidence": 1.0,
+    "summary": "新项目已成功创建并显示在侧边栏，核心功能验证通过。",
+    "issues": [],
+    "suggestions": [],
+    "expectation_results": [
+      {
+        "expectation": "验证新项目已创建并显示在侧边栏",
+        "verified": true,
+        "comment": "规则验证实际结果明确显示通过"
+      }
+    ],
+    "steps_total": 6,
+    "steps_passed": 6,
+    "step_success_rate": 1.0,
+    "start_time": "2026-05-08T18:12:31.044025",
+    "end_time": "2026-05-08T18:13:00.022895",
+    "screenshots": [
+      "reports\\screenshots\\step_001_ok.png",
+      "reports\\screenshots\\step_002_login.png",
+      "reports\\screenshots\\step_003_ok.png",
+      "reports\\screenshots\\step_004_ok.png",
+      "reports\\screenshots\\step_005_ok.png",
+      "reports\\screenshots\\step_006_ok.png"
+    ],
+    "expectations_inline": [
+      {
+        "expectation": "验证新项目已创建并显示在侧边栏",
+        "inline_pass": true
+      }
+    ],
+    "logs": [
+      "[18:12:31] 开始执行: 通过侧边栏创建新项目",
+      "[18:12:31] 规划完成，共 6 步",
+      "[步骤 1] ✓ 打开目标应用 https://demo.4gaboards.com",
+      "[步骤 2] ✓ 使用账号 demo@demo.demo 登录",
+      "[步骤 3] ✓ 点击侧边栏中的项目部分",
+      "[步骤 4] ✓ 点击添加项目按钮",
+      "[步骤 5] ✓ 输入项目名称",
+      "[步骤 6] ✓ 点击创建按钮确认",
+      "[18:13:00] 预期验证: 验证新项目已创建并显示在侧边栏 → ✓"
+    ]
+  },
+  {
+    "scenario_id": "f006_s01",
+    "scenario_name": "在默认看板创建新卡片",
+    "feature_id": "f006",
+    "priority": "high",
+    "result": "FAIL",
+    "confidence": 0.9,
+    "summary": "新卡片未成功创建并显示在列表中，核心功能验证失败。",
+    "issues": [
+      "点击'Add Card'按钮失败，可能存在元素定位问题或按钮不可用",
+      "后续输入和保存步骤因初始点击失败而无法执行",
+      "最终页面URL未变化，可能停留在登录后首页"
+    ],
+    "suggestions": [
+      "检查'Add Card'按钮的定位策略（如使用ID、CSS选择器替代XPath）",
+      "验证按钮是否在可见区域内或需要滚动才能点击",
+      "增加按钮状态检查（是否可点击、是否被遮挡）",
+      "考虑添加等待机制确保页面完全加载后再操作"
+    ],
+    "expectation_results": [
+      {
+        "expectation": "验证新卡片已创建并显示在列表中",
+        "verified": false,
+        "comment": "规则验证实际结果明确显示未通过"
+      }
+    ],
+    "steps_total": 5,
+    "steps_passed": 2,
+    "step_success_rate": 0.4,
+    "start_time": "2026-05-08T18:13:04.804024",
+    "end_time": "2026-05-08T18:15:02.698511",
+    "screenshots": [
+      "reports\\screenshots\\step_001_ok.png",
+      "reports\\screenshots\\step_002_login.png",
+      "reports\\screenshots\\step_003_fail.png",
+      "reports\\screenshots\\step_004_fail.png",
+      "reports\\screenshots\\step_005_fail.png"
+    ],
+    "expectations_inline": [
+      {
+        "expectation": "验证新卡片已创建并显示在列表中",
+        "inline_pass": false
+      }
+    ],
+    "logs": [
+      "[18:13:04] 开始执行: 在默认看板创建新卡片",
+      "[18:13:04] 规划完成，共 5 步",
+      "[步骤 1] ✓ 打开目标应用 https://demo.4gaboards.com",
+      "[步骤 2] ✓ 使用账号 demo@demo.demo 登录",
+      "[步骤 3] ✗ 点击列表中的'Add Card'按钮",
+      "[步骤 4] ✗ 输入卡片标题",
+      "[步骤 5] ✗ 点击'Save'按钮保存卡片",
+      "[18:14:41] 连续 3 步失败，提前终止本场景以节省时间",
+      "[18:15:02] 预期验证: 验证新卡片已创建并显示在列表中 → ✗"
+    ]
+  },
+  {
+    "scenario_id": "f007_s01",
+    "scenario_name": "在同一个看板内移动卡片",
+    "feature_id": "f007",
+    "priority": "high",
+    "result": "FAIL",
+    "confidence": 0.9,
+    "summary": "卡片移动功能未成功完成，卡片未从To Do列表移除且未在Done列表中显示。",
+    "issues": [
+      "拖放操作可能未正确执行或完成",
+      "卡片状态更新逻辑可能存在问题"
+    ],
+    "suggestions": [
+      "检查拖放操作的实现细节，确保事件正确触发",
+      "验证卡片状态更新机制，确保数据正确同步到UI",
+      "增加更详细的错误日志，以便定位问题"
+    ],
+    "expectation_results": [
+      {
+        "expectation": "卡片已不在To Do列表中",
+        "verified": true,
+        "comment": "验证通过，卡片已从To Do列表中移除"
+      },
+      {
+        "expectation": "卡片已出现在Done列表中",
+        "verified": false,
+        "comment": "验证未通过，卡片未在Done列表中显示"
+      }
+    ],
+    "steps_total": 13,
+    "steps_passed": 8,
+    "step_success_rate": 0.6153846153846154,
+    "start_time": "2026-05-08T18:15:08.358849",
+    "end_time": "2026-05-08T18:19:17.769937",
+    "screenshots": [
+      "reports\\screenshots\\step_001_ok.png",
+      "reports\\screenshots\\step_002_login.png",
+      "reports\\screenshots\\step_003_ok.png",
+      "reports\\screenshots\\step_004_fail.png",
+      "reports\\screenshots\\step_005_fail.png",
+      "reports\\screenshots\\step_006_fail.png",
+      "reports\\screenshots\\step_007_fail.png",
+      "reports\\screenshots\\step_008_fail.png",
+      "reports\\screenshots\\step_009_ok.png",
+      "reports\\screenshots\\step_010_ok.png",
+      "reports\\screenshots\\step_011_ok.png",
+      "reports\\screenshots\\step_012_fail.png",
+      "reports\\screenshots\\step_013_fail.png"
+    ],
+    "expectations_inline": [
+      {
+        "expectation": "卡片已不在To Do列表中",
+        "inline_pass": true
+      },
+      {
+        "expectation": "卡片已出现在Done列表中",
+        "inline_pass": false
+      }
+    ],
+    "logs": [
+      "[18:15:08] 开始执行: 在同一个看板内移动卡片",
+      "[18:15:08] 规划完成，共 13 步",
+      "[步骤 1] ✓ 打开目标应用 https://demo.4gaboards.com",
+      "[步骤 2] ✓ 使用账号 demo@demo.demo 登录",
+      "[步骤 3] ✓ 导航到应用首页",
+      "[步骤 4] ✗ 点击用户名输入框",
+      "[18:15:47] 备选方案成功: 点击 Dashboard 可能是进入用户名输入区域的替代路径",
+      "[步骤 5] ✗ 输入用户名",
+      "[步骤 6] ✗ 点击密码输入框",
+      "[18:16:23] 备选方案成功: 点击 Settings 可能会展开密码输入框相关的选项",
+      "[步骤 7] ✗ 输入密码",
+      "[步骤 8] ✗ 点击登录按钮",
+      "[步骤 9] ✓ 等待仪表板页面加载",
+      "[步骤 10] ✓ 点击看板导航",
+      "[步骤 11] ✓ 等待看板加载",
+      "[步骤 12] ✗ 悬停在第一个列表上",
+      "[步骤 13] ✗ 将卡片从To Do列表拖到Done列表",
+      "[18:18:50] 预期验证: 卡片已不在To Do列表中 → ✓",
+      "[18:19:17] 预期验证: 卡片已出现在Done列表中 → ✗"
+    ]
+  },
+  {
+    "scenario_id": "f011_s02",
+    "scenario_name": "验证仪表板项目概览",
+    "feature_id": "f011",
+    "priority": "medium",
+    "result": "FAIL",
+    "confidence": 0.8,
+    "summary": "创建新项目按钮未通过可见性验证，核心功能未实现",
+    "issues": [
+      "创建新项目按钮不可见，可能存在UI渲染问题"
+    ],
+    "suggestions": [
+      "检查按钮元素的CSS样式和加载逻辑，确保正确渲染"
+    ],
+    "expectation_results": [
+      {
+        "expectation": "验证创建新项目按钮可见",
+        "verified": false,
+        "comment": "按钮未通过可见性检查"
+      },
+      {
+        "expectation": "验证至少有一个项目显示",
+        "verified": true,
+        "comment": "项目数量检查通过"
+      }
+    ],
+    "steps_total": 4,
+    "steps_passed": 4,
+    "step_success_rate": 1.0,
+    "start_time": "2026-05-08T18:19:26.156133",
+    "end_time": "2026-05-08T18:20:23.443674",
+    "screenshots": [
+      "reports\\screenshots\\step_001_ok.png",
+      "reports\\screenshots\\step_002_login.png",
+      "reports\\screenshots\\step_003_ok.png",
+      "reports\\screenshots\\step_004_fail.png"
+    ],
+    "expectations_inline": [
+      {
+        "expectation": "验证创建新项目按钮可见",
+        "inline_pass": false
+      },
+      {
+        "expectation": "验证至少有一个项目显示",
+        "inline_pass": true
+      }
+    ],
+    "logs": [
+      "[18:19:26] 开始执行: 验证仪表板项目概览",
+      "[18:19:26] 规划完成，共 4 步",
+      "[步骤 1] ✓ 打开目标应用 https://demo.4gaboards.com",
+      "[步骤 2] ✓ 使用账号 demo@demo.demo 登录",
+      "[步骤 3] ✓ 确保仪表板已加载",
+      "[步骤 4] ✗ 悬停在创建新项目按钮上",
+      "[18:19:55] 备选方案成功: 悬停在'Add Project'按钮上，这是创建新项目的入口按钮",
+      "[18:20:23] 预期验证: 验证创建新项目按钮可见 → ✗",
+      "[18:20:23] 预期验证: 验证至少有一个项目显示 → ✓"
+    ]
+  }
+]
