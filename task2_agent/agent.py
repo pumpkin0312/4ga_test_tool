@@ -36,6 +36,7 @@ class TestAgent:
         from task2_agent.memory   import AgentMemory
         from task2_agent.executor import BrowserExecutor
         from task2_agent.verifier import Verifier
+        from task2_agent.resolver import PageResolver
         from llm_client           import DEFAULT_BASE_URL
 
         base_url = base_url or DEFAULT_BASE_URL
@@ -54,6 +55,10 @@ class TestAgent:
         self.password  = config.get("password", "demo")
         self.max_steps = config.get("max_steps", 20)
         self.take_ss   = config.get("screenshot", True)
+
+        # 页面感知 Resolver：执行前主动读取页面，对齐 LLM target 与真实 DOM
+        self.page_aware = config.get("page_aware", True)
+        self.resolver   = PageResolver(api_key, model, base_url=base_url) if self.page_aware else None
 
         self._report_dir = Path(config.get("report_dir", "reports"))
         self._report_dir.mkdir(parents=True, exist_ok=True)
@@ -96,6 +101,13 @@ class TestAgent:
         try:
             # ── 3. 逐步执行 ───────────────────────────────────────────────────
             for i, step in enumerate(steps[: self.max_steps]):
+                # 执行前页面感知：让 Resolver 校验/重定向 target
+                if self.resolver and not step.get("_auto"):
+                    try:
+                        step = self.resolver.resolve(self.executor, step)
+                    except Exception as e:
+                        console.print(f"[yellow]Resolver 调用异常，跳过: {e}[/yellow]")
+
                 success, ss_path, error = self._run_one_step(step, i + 1)
 
                 # 记录到记忆
@@ -228,6 +240,8 @@ class TestAgent:
         """处理 login 特殊动作，其余委托给 executor"""
         action = step.get("action", "").lower()
 
+        idx_label = f"{idx:03d}" if isinstance(idx, int) else str(idx)
+
         if action == "login":
             value    = step.get("value", "")
             parts    = value.split("|") if "|" in value else []
@@ -235,10 +249,19 @@ class TestAgent:
             password = parts[1].strip() if len(parts) > 1 else self.password
 
             success  = self.executor.login(username, password)
-            idx_label = f"{idx:03d}" if isinstance(idx, int) else str(idx)
             ss_path  = self.executor.screenshot(f"step_{idx_label}_login")
             self.memory.set_login_state(logged_in=success, username=username)
             return success, ss_path, ("" if success else "登录失败")
+
+        if action == "enter_first_project":
+            success = self.executor.enter_first_project()
+            ss_path = self.executor.screenshot(f"step_{idx_label}_enter_project")
+            return success, ss_path, ("" if success else "进入项目失败")
+
+        if action == "open_first_board":
+            success = self.executor.open_first_board()
+            ss_path = self.executor.screenshot(f"step_{idx_label}_open_board")
+            return success, ss_path, ("" if success else "打开看板失败")
 
         return self.executor.execute_step(step, idx, take_screenshot=self.take_ss)
 

@@ -64,18 +64,41 @@ class Planner:
         self.llm   = LLMClient(api_key=api_key, model=model, base_url=base_url)
         self.model = model
 
+    # ── precondition 关键词 ──────────────────────────────────────────────────
+    # 用于判断场景需要的页面深度（dashboard / project / board）
+    _LOGIN_TEST_KW   = ["登录页", "登录界面", "登录前", "未登录", "login page", "not logged"]
+    _PROJECT_KW      = ["项目", "project"]
+    _BOARD_KW        = ["看板", "board", "列表", "list", "卡片", "card"]
+    _DASHBOARD_KW    = ["仪表板", "仪表盘", "dashboard", "首页", "home"]
+
     def prepare_steps(self,
                       scenario: dict,
                       app_url:  str,
                       username: str,
                       password: str) -> list[dict]:
         """
-        在场景步骤前自动插入：导航到应用 + 登录。
-        返回完整的可执行步骤列表。
+        在场景步骤前自动插入：导航 + 登录 + （按需）进入项目 + （按需）打开看板。
+        前置深度根据 scenario.precondition 的文字推断：
+          - "已登录页面" / "未登录"      → 只 navigate，不 login（让场景自己测登录）
+          - precondition 含"项目"        → navigate + login + 进入第一个项目
+          - precondition 含"看板/列表/卡片" → navigate + login + 进项目 + 开看板
+          - 默认                         → navigate + login（停在 dashboard）
         """
-        steps = []
+        precondition = (scenario.get("precondition") or "").lower()
+        first_step_target = ""
+        if scenario.get("steps"):
+            first_step_target = (scenario["steps"][0].get("target") or "").lower()
 
-        # 自动前置：打开应用
+        is_login_test = any(kw in precondition for kw in self._LOGIN_TEST_KW) or \
+                        any(kw in first_step_target for kw in
+                            ["input[name='emailorusername']", "input[type='password']",
+                             "input[type='email']"])
+        needs_board   = any(kw in precondition for kw in self._BOARD_KW)
+        needs_project = needs_board or any(kw in precondition for kw in self._PROJECT_KW)
+
+        steps: list[dict] = []
+
+        # ① 打开应用（永远需要）
         steps.append({
             "action":      "navigate",
             "target":      app_url,
@@ -84,16 +107,37 @@ class Planner:
             "_auto":       True,
         })
 
-        # 自动前置：登录
-        steps.append({
-            "action":      "login",
-            "target":      "login_form",
-            "value":       f"{username}|{password}",
-            "description": f"使用账号 {username} 登录",
-            "_auto":       True,
-        })
+        # ② 登录（登录测试场景跳过）
+        if not is_login_test:
+            steps.append({
+                "action":      "login",
+                "target":      "login_form",
+                "value":       f"{username}|{password}",
+                "description": f"使用账号 {username} 登录",
+                "_auto":       True,
+            })
 
-        # 场景本身的步骤
+        # ③ 进入第一个项目（场景需要项目/看板/列表/卡片视图）
+        if needs_project and not is_login_test:
+            steps.append({
+                "action":      "enter_first_project",
+                "target":      "",
+                "value":       "",
+                "description": "从仪表板进入第一个项目",
+                "_auto":       True,
+            })
+
+        # ④ 打开第一个看板（场景需要看板/列表/卡片视图）
+        if needs_board and not is_login_test:
+            steps.append({
+                "action":      "open_first_board",
+                "target":      "",
+                "value":       "",
+                "description": "打开第一个看板",
+                "_auto":       True,
+            })
+
+        # ⑤ 场景本身的步骤
         for s in scenario.get("steps", []):
             steps.append(dict(s))
 

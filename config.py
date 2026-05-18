@@ -17,6 +17,9 @@ LLM_MODEL    = os.getenv("LLM_MODEL", "glm-4-plus")  # 可选: glm-4-plus / glm-
 TARGET_APP_URL = "https://demo.4gaboards.com"
 DOCS_BASE_URL  = "https://docs.4gaboards.com"
 
+# 本地完整文档目录（推荐使用）。网络爬取作为 fallback。
+LOCAL_DOCS_DIR = "../4gaboards_doc/4gaboards"
+
 # 演示账号（4ga Boards demo 站点默认账号）
 DEMO_USERNAME = "demo@demo.demo"
 DEMO_PASSWORD = "demo"

@@ -176,6 +176,45 @@ class BrowserExecutor:
         except Exception:
             return False
 
+    def is_text_visible_strict(self, text: str) -> bool:
+        """
+        严格判断指定文本是否作为真实可见文本出现在页面上。
+        与 Playwright 的 get_by_text() 不同：
+          - **排除 input/textarea/contenteditable 的 value/innerText**
+            （避免 Bug：表单里输入过的字符串被当成"页面显示了该内容"）
+          - 只看叶子元素的 textContent，且要求元素本身可见
+        """
+        if not text or not text.strip():
+            return False
+        try:
+            return self._page.evaluate("""
+            (text) => {
+                const want = String(text).trim().toLowerCase();
+                if (!want) return false;
+                const all = document.body ? document.body.querySelectorAll('*') : [];
+                for (const el of all) {
+                    const tag = el.tagName;
+                    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') continue;
+                    if (el.isContentEditable) continue;
+                    // 只看叶子或直接 textNode 的元素（避免父节点 textContent 包含子树文本误判）
+                    let direct = '';
+                    for (const node of el.childNodes) {
+                        if (node.nodeType === 3) direct += node.textContent || '';
+                    }
+                    direct = direct.trim().toLowerCase();
+                    if (!direct || !direct.includes(want)) continue;
+                    // 可见性
+                    const r = el.getBoundingClientRect();
+                    if (r.width === 0 || r.height === 0) continue;
+                    const cs = window.getComputedStyle(el);
+                    if (cs.visibility === 'hidden' || cs.display === 'none' || cs.opacity === '0') continue;
+                    return true;
+                }
+                return false;
+            }""", text)
+        except Exception:
+            return False
+
     def get_text(self, selector: str) -> str:
         try:
             el = self._find(selector, timeout=3000)
@@ -213,6 +252,63 @@ class BrowserExecutor:
         except Exception:
             return []
 
+    def snapshot_interactive_elements(self, limit: int = 60) -> list[dict]:
+        """
+        抓取当前页面所有可交互元素的快照，供 PageResolver 决策。
+        每个元素返回：{kind, text, placeholder, aria_label, name, type, in_dialog}
+        - kind 区分 button/link/input/menuitem
+        - in_dialog 标记元素是否在对话框/弹窗内（用于消歧）
+        """
+        try:
+            return self._page.evaluate("""
+            (limit) => {
+                const sels = [
+                    ['button',                'button'],
+                    ['[role="button"]',       'button'],
+                    ['a[href]',               'link'],
+                    ['[role="menuitem"]',     'menuitem'],
+                    ['input',                 'input'],
+                    ['textarea',              'input'],
+                    ['[contenteditable="true"]', 'input'],
+                ];
+                const seen = new Set();
+                const out  = [];
+                for (const [sel, kind] of sels) {
+                    for (const el of document.querySelectorAll(sel)) {
+                        if (el.disabled) continue;
+                        const r = el.getBoundingClientRect();
+                        if (r.width === 0 || r.height === 0) continue;
+                        // 大致判断是否在视口附近（在 dialog 内通常会进视口）
+                        const style = window.getComputedStyle(el);
+                        if (style.visibility === 'hidden' || style.display === 'none') continue;
+
+                        const inDialog = !!el.closest(
+                            "[role='dialog'],[role='alertdialog'],dialog," +
+                            "[class*='Popup' i],[class*='Modal' i],[class*='Dialog' i]"
+                        );
+
+                        const text = (el.innerText || el.value || '').trim().slice(0, 80);
+                        const key  = kind + '|' + text + '|' + (el.name || '') + '|' + inDialog;
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+
+                        out.push({
+                            kind:        kind,
+                            text:        text,
+                            placeholder: el.getAttribute('placeholder') || '',
+                            aria_label:  el.getAttribute('aria-label')  || '',
+                            name:        el.getAttribute('name')        || '',
+                            type:        el.getAttribute('type')        || '',
+                            in_dialog:   inDialog,
+                        });
+                        if (out.length >= limit) return out;
+                    }
+                }
+                return out;
+            }""", limit)
+        except Exception:
+            return []
+
     # ── 截图 ──────────────────────────────────────────────────────────────────
 
     def screenshot(self, name: str = None) -> str:
@@ -226,6 +322,184 @@ class BrowserExecutor:
         except Exception as e:
             console.print(f"[yellow]截图失败: {e}[/yellow]")
             return ""
+
+    # ── 导航辅助：进入项目 / 打开看板 ──────────────────────────────────────────
+
+    def _wait_dashboard_ready(self, timeout: int = 15000) -> bool:
+        """
+        等 Dashboard 真正加载完成（不再只是 loading 圈）。
+        判据：sidebar 或主区域出现"Add Project / Add Board"等可见按钮。
+        """
+        try:
+            self._page.wait_for_load_state("networkidle", timeout=timeout)
+        except Exception:
+            pass
+        # 等任何 dashboard 标志性元素出现
+        sentinels = [
+            "text=Add Project",
+            "text=Dashboard",
+            "[class*='Sidebar' i]",
+            "[class*='Dashboard' i]",
+            "aside",
+        ]
+        for s in sentinels:
+            try:
+                if self._page.wait_for_selector(s, timeout=4000, state="visible"):
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def enter_first_project(self) -> bool:
+        """
+        从 Dashboard 进入第一个可点击的项目卡片。
+        实测 4ga Boards 项目卡片不是 <a>，而是 div + onClick；并且首次跳转后
+        页面有较长 loading，所以先等渲染完再尝试多种 selector。
+        """
+        try:
+            self._wait_dashboard_ready()
+            self.sleep(1.0)   # 给 React 多一点时间收尾
+
+            # 尝试 1：href 形式（最稳，但 4ga Boards 可能没有）
+            for sel in ["main a[href*='/projects/']",
+                        "a[href*='/projects/']",
+                        "aside a[href*='/projects/']"]:
+                try:
+                    loc = self._page.locator(sel).first
+                    if loc.count() > 0 and loc.is_visible(timeout=500):
+                        loc.scroll_into_view_if_needed()
+                        loc.click()
+                        self.sleep(2)
+                        console.print(f"[green]进入项目（href 形式 selector: {sel}）[/green]")
+                        return True
+                except Exception:
+                    continue
+
+            # 尝试 2：DOM 探测——在主区域找有 cursor:pointer 且像项目卡片的元素
+            picked = self._page.evaluate("""
+            () => {
+                const roots = ['main', '[role="main"]', '#root > div'];
+                let containers = [];
+                for (const r of roots) {
+                    document.querySelectorAll(r).forEach(c => containers.push(c));
+                }
+                for (const c of containers) {
+                    if (!c) continue;
+                    const cards = c.querySelectorAll("div, button, [role='button']");
+                    for (const card of cards) {
+                        const r = card.getBoundingClientRect();
+                        if (r.width < 100 || r.height < 50) continue;
+                        if (r.width > 600 || r.height > 400) continue;
+                        const style = window.getComputedStyle(card);
+                        if (style.cursor !== 'pointer') continue;
+                        const txt = (card.innerText || '').trim();
+                        if (!txt || txt.length > 80) continue;
+                        // 跳过 sidebar 中部的"Add"按钮
+                        if (/^\\+?\\s*(add|create)/i.test(txt)) continue;
+                        card.scrollIntoView({block:'center'});
+                        card.click();
+                        return txt;
+                    }
+                }
+                return null;
+            }""")
+            if picked:
+                console.print(f"[green]进入项目（DOM 探测: '{picked}'）[/green]")
+                self.sleep(2)
+                return True
+
+            # 尝试 3：sidebar 上点项目名（4ga Boards sidebar 里有项目列表）
+            try:
+                # sidebar 上每个项目通常以独立的可点击块呈现
+                sidebar_items = self._page.locator(
+                    "aside [class*='item' i], aside [class*='Project' i], aside li"
+                )
+                cnt = min(sidebar_items.count(), 10)
+                for i in range(cnt):
+                    el = sidebar_items.nth(i)
+                    try:
+                        if not el.is_visible(timeout=300):
+                            continue
+                        txt = (el.inner_text() or "").strip().lower()
+                        # 跳过 "Add..." / "Search..." 等控制项
+                        if not txt or txt.startswith(("+", "add ", "create ", "search")):
+                            continue
+                        el.click()
+                        self.sleep(2)
+                        console.print(f"[green]进入项目（sidebar item: {txt[:30]}）[/green]")
+                        return True
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+            console.print("[yellow]未找到可点击的项目卡片[/yellow]")
+            return False
+        except Exception as e:
+            console.print(f"[yellow]进入项目异常: {e}[/yellow]")
+            return False
+
+    def open_first_board(self) -> bool:
+        """在项目视图下打开第一个看板。同样需要先等加载完。"""
+        try:
+            try:
+                self._page.wait_for_load_state("networkidle", timeout=8000)
+            except Exception:
+                pass
+            self.sleep(1.0)
+
+            # 尝试 1：href 形式
+            for sel in ["main a[href*='/boards/']",
+                        "a[href*='/boards/']",
+                        "aside a[href*='/boards/']"]:
+                try:
+                    loc = self._page.locator(sel).first
+                    if loc.count() > 0 and loc.is_visible(timeout=500):
+                        loc.scroll_into_view_if_needed()
+                        loc.click()
+                        self.sleep(2)
+                        console.print(f"[green]打开看板（href: {sel}）[/green]")
+                        return True
+                except Exception:
+                    continue
+
+            # 尝试 2：DOM 探测主区域可点击卡片
+            picked = self._page.evaluate("""
+            () => {
+                const roots = ['main', '[role="main"]', '#root > div'];
+                let containers = [];
+                for (const r of roots) {
+                    document.querySelectorAll(r).forEach(c => containers.push(c));
+                }
+                for (const c of containers) {
+                    if (!c) continue;
+                    const cards = c.querySelectorAll("div, button, [role='button']");
+                    for (const card of cards) {
+                        const r = card.getBoundingClientRect();
+                        if (r.width < 100 || r.height < 50) continue;
+                        if (r.width > 600 || r.height > 400) continue;
+                        const style = window.getComputedStyle(card);
+                        if (style.cursor !== 'pointer') continue;
+                        const txt = (card.innerText || '').trim();
+                        if (!txt || txt.length > 80) continue;
+                        if (/^\\+?\\s*(add|create)/i.test(txt)) continue;
+                        card.scrollIntoView({block:'center'});
+                        card.click();
+                        return txt;
+                    }
+                }
+                return null;
+            }""")
+            if picked:
+                console.print(f"[green]打开看板（DOM 探测: '{picked}'）[/green]")
+                self.sleep(2)
+                return True
+
+            console.print("[yellow]未找到可点击的看板[/yellow]")
+            return False
+        except Exception as e:
+            console.print(f"[yellow]打开看板异常: {e}[/yellow]")
+            return False
 
     # ── 登录（4ga Boards 专用）────────────────────────────────────────────────
 

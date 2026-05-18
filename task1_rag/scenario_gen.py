@@ -70,24 +70,48 @@ FEATURE_PROMPT = """\
 {context}
 
 ## 任务
-从上述文档中提取软件的主要功能点，以 JSON 数组格式输出，不要输出其他任何内容。
+从文档中提取**测试视角的主要功能点**，重点关注核心业务操作，避免被次要细节淹没。
+
+## 必须覆盖的核心功能（如文档提到，务必单独成项）
+**用户管理**
+- 用户注册、登录、登出、修改密码
+
+**项目管理**
+- 创建项目、修改项目设置、删除项目、邀请成员
+
+**看板操作**
+- 创建看板、切换看板视图、删除看板、导入看板
+
+**列表管理**
+- 创建列表、重命名列表、移动列表、折叠/展开列表、删除列表
+
+**卡片管理**（核心操作 + 富文本合并）
+- 创建卡片、移动卡片（拖拽/菜单）、复制卡片、删除卡片、编辑卡片标题
+- 设置卡片成员、设置标签、设置截止日期、设置任务清单
+- 添加附件、添加评论
+- **编辑卡片描述**（把富文本编辑器的所有特性如：彩色文本/代码块/表格/列表/@提及 等**合并成"编辑卡片描述（富文本）"一个功能点**，不要拆成多个）
+
+**设置**
+- 修改用户资料、修改通知偏好、切换深色/浅色模式、切换侧边栏样式
 
 ## 输出格式
 ```json
 [
   {{
     "id": "f001",
-    "name": "功能点名称（动宾短语，如：创建卡片）",
-    "description": "一句话描述该功能",
-    "category": "所属分类（用户管理/项目管理/看板操作/列表管理/卡片管理/设置）"
+    "name": "动宾短语（如：创建卡片）",
+    "description": "一句话描述",
+    "category": "用户管理/项目管理/看板操作/列表管理/卡片管理/设置"
   }}
 ]
 ```
 
-要求：
-1. 粒度适中，每个功能点对应一个具体操作（如"创建卡片"而非宽泛的"卡片管理"）
-2. 覆盖所有主要功能，不遗漏
-3. 只输出 JSON，不要任何解释文字
+## 关键约束
+1. **粒度均衡**：每个分类建议 3-6 个功能点，**不要让某一类（尤其卡片管理）超过 8 个**
+2. **富文本编辑器只算 1 个功能点**，不要把彩色文本/表格/列表/快捷键等单独拆开
+3. 优先 **CRUD（创建/读取/更新/删除）核心操作**，次要细节合并或省略
+4. 期望总数 **20-30 个**功能点
+5. 只输出 JSON，不要任何解释
 """
 
 SCENARIO_PROMPT = """\
@@ -249,10 +273,25 @@ class ScenarioGenerator:
 
         # 用 RAG 检索最相关内容，或直接拼接文档
         if self.rag:
-            context = "\n\n---\n\n".join([
-                self.rag.get_context("软件功能 用户操作 看板 卡片 列表 项目"),
-                self.rag.get_context("设置 管理 账户 通知 权限"),
-            ])
+            # 多组查询保证各分类（项目/看板/列表/卡片/设置）的核心 CRUD 都被召回，
+            # 避免单一查询被 card.md 这种长文档全部占满。
+            queries = [
+                "create project board list card",
+                "delete remove board list card project",
+                "move drag card to another list",
+                "edit rename card list board title",
+                "register login logout password user account",
+                "settings preferences notifications profile sidebar",
+                "import export project board",
+            ]
+            seen = set()
+            parts = []
+            for q in queries:
+                ctx = self.rag.get_context(q, top_k=3)
+                if ctx and ctx not in seen:
+                    parts.append(ctx)
+                    seen.add(ctx)
+            context = "\n\n---\n\n".join(parts)
         elif pages:
             parts, total = [], 0
             for p in pages:

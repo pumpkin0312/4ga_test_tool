@@ -214,6 +214,62 @@ class DocsCrawler:
             return data
         return []
 
+    def load_local_markdown(self, local_dir: str) -> list[dict]:
+        """
+        从本地 Markdown 文档目录加载知识（推荐方式）。
+        每个 .md 文件作为一个"页面"。比网络爬取更可靠、内容更完整。
+
+        参数:
+            local_dir: 文档根目录，预期结构如：
+                <local_dir>/
+                  ├── For_Users/*.md
+                  ├── For_Administrators/*.md
+                  └── Getting_Started/*.md
+        """
+        root = Path(local_dir)
+        if not root.exists():
+            console.print(f"[yellow]本地文档目录不存在: {root}[/yellow]")
+            return []
+
+        pages: list[dict] = []
+        md_files = sorted(root.rglob("*.md"))
+        console.print(f"[cyan]从本地加载 Markdown: {root}（{len(md_files)} 个文件）[/cyan]")
+
+        for md_path in md_files:
+            try:
+                with open(md_path, encoding="utf-8") as f:
+                    content = f.read().strip()
+                if len(content) < 30:
+                    continue
+
+                # 抽取一级标题作为 title；失败则用文件名
+                title = md_path.stem.replace("-", " ").replace("_", " ").title()
+                for line in content.splitlines():
+                    if line.startswith("# "):
+                        title = line.lstrip("# ").strip()
+                        break
+
+                # 用相对路径 + 父目录作为 url 和 category
+                rel_path = md_path.relative_to(root)
+                category = rel_path.parts[0] if len(rel_path.parts) > 1 else "Misc"
+
+                pages.append({
+                    "url":      f"local://{rel_path.as_posix()}",
+                    "path":     str(rel_path.as_posix()),
+                    "title":    title,
+                    "content":  content,
+                    "category": category,
+                })
+                console.print(f"  [green]✓[/green] {category}/{md_path.name}  ({len(content)} 字)")
+            except Exception as e:
+                console.print(f"  [yellow]跳过 {md_path}: {e}[/yellow]")
+
+        if pages:
+            self._save(pages)
+            total_chars = sum(len(p["content"]) for p in pages)
+            console.print(f"[green]本地文档加载完成: {len(pages)} 个文件，共 {total_chars} 字[/green]")
+        return pages
+
 
 if __name__ == "__main__":
     import sys, os

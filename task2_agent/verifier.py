@@ -128,43 +128,50 @@ class Verifier:
 
     def _is_visible_robust(self, executor, target: str, value: str = "") -> bool:
         """
-        兼容 LLM 写出的各种 selector 形式：
-          - "text='Foo'"   → 用文本搜索
-          - "Add Project"   → 当作可见文本
-          - CSS selector    → 直接调 executor.is_visible
-        若 value 非空且 condition 是 visible/text_contains，也用 value 当文本兜底。
+        判断预期元素/文本是否真正可见。
+
+        策略（按优先级）：
+          1. 解析出"期望的文本"——优先来自 `text='X'` 形式，其次是 value，
+             最后是纯文本 target。**严格用 is_text_visible_strict 校验**：
+             只承认作为真实可见文本节点出现的内容，**不承认 input/textarea
+             的 value 命中**（避免"表单里输过 X 就误以为 X 已显示"的假阳性）。
+          2. 若 target 看起来是 CSS selector，再用 executor.is_visible() 校验。
+
+        与旧版差异：去掉了用 _find() 做 fallback 的兜底逻辑。_find 太宽松，
+        会把输入框 value、隐藏元素都算"找到"，是 f006_s01 假阳性 PASS 的元凶。
         """
-        candidates = []
+        import re as _re
+
         t = (target or "").strip()
         v = (value or "").strip()
 
-        # 1) 标准 CSS / 文本 selector
-        if t:
-            candidates.append(t)
-
-        # 2) "text='Foo'" 或 "text=Foo" → 提取里面的文本，再用 _find 找
-        import re as _re
+        # 1) 提取期望可见的"纯文本"
+        text_to_find = None
         m = _re.match(r"^text\s*=\s*['\"]?(.+?)['\"]?$", t)
         if m:
-            candidates.append(m.group(1).strip())
+            text_to_find = m.group(1).strip()
+        elif v:
+            # target 可能是 CSS selector + value 给了具体期望文本
+            text_to_find = v
+        elif t and not any(c in t for c in "[].#>:"):
+            # 纯文本 target（如 "New Test Card"）
+            text_to_find = t
 
-        # 3) 如果 value 提供了文本（如期望某个项目名出现），也试试
-        if v and v not in candidates:
-            candidates.append(v)
-
-        for c in candidates:
+        if text_to_find:
             try:
-                if executor.is_visible(c):
+                if executor.is_text_visible_strict(text_to_find):
                     return True
             except Exception:
                 pass
-            # 文本类候选用 _find 更鲁棒
+
+        # 2) target 像 CSS selector → 走原生可见性校验
+        if t and any(c in t for c in "[].#>:"):
             try:
-                el = executor._find(c, timeout=2000)
-                if el:
+                if executor.is_visible(t):
                     return True
             except Exception:
                 pass
+
         return False
 
     # ══════════════════════════════════════════════════════════════════════════

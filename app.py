@@ -63,6 +63,7 @@ def load_cfg() -> dict:
         docs_url="https://docs.4gaboards.com",
         username="demo@demo.demo", password="demo",
         headless=True, max_steps=20,
+        page_aware=True,
     )
     cached = load_json("data/.cfg.json")
     if cached:
@@ -101,14 +102,21 @@ def render_sidebar() -> dict:
 
         st.divider()
         st.markdown("**🔧 执行参数**")
-        headless  = st.checkbox("无头浏览器（不弹窗）", value=cfg["headless"])
-        max_steps = st.slider("最大步骤数/场景", 5, 40, cfg["max_steps"])
+        headless   = st.checkbox("无头浏览器（不弹窗）", value=cfg["headless"])
+        page_aware = st.checkbox(
+            "🔍 页面感知（Page-aware Resolver）",
+            value=cfg.get("page_aware", True),
+            help="每步执行前先读取页面、自动对齐 LLM 给的 target 与真实 DOM。"
+                 "找不到时才调 LLM，可减少『按钮名猜错』导致的失败。",
+        )
+        max_steps  = st.slider("最大步骤数/场景", 5, 40, cfg["max_steps"])
 
         if st.button("💾 保存配置"):
             save_cfg(dict(api_key=api_key, base_url=base_url, model=model,
                           app_url=app_url, docs_url=docs_url,
                           username=username, password=password,
-                          headless=headless, max_steps=max_steps))
+                          headless=headless, max_steps=max_steps,
+                          page_aware=page_aware))
             st.success("已保存")
 
         st.divider()
@@ -117,7 +125,8 @@ def render_sidebar() -> dict:
     return dict(api_key=api_key, base_url=base_url, model=model,
                 app_url=app_url, docs_url=docs_url,
                 username=username, password=password,
-                headless=headless, max_steps=max_steps)
+                headless=headless, max_steps=max_steps,
+                page_aware=page_aware)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -136,13 +145,33 @@ def tab_generate(cfg: dict):
     else:
         st.info("尚未生成数据，填写 API Key 后点击下方按钮开始。")
 
-    use_cache = st.checkbox("使用已缓存文档（跳过爬取）", value=True)
+    # 知识源选择 & 缓存控制
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        source_local = st.checkbox(
+            "📁 使用本地完整文档（推荐）",
+            value=True,
+            help="读取 4gaboards_doc/ 下的官方 Markdown（约 34KB / 15 个文件）。"
+                 "比网络爬取更可靠、内容更丰富。",
+        )
+    with col2:
+        use_cache = st.checkbox(
+            "🗃️ 使用已缓存索引",
+            value=True,
+            help="若数据源没换、文档没更新，可直接复用上次的向量索引。",
+        )
+    with col3:
+        force_rebuild = st.checkbox(
+            "🔄 强制重建索引",
+            value=False,
+            help="切换知识源、或修改了文档后勾选此项重新构建向量索引。",
+        )
 
     if st.button("🚀 开始生成测试场景", type="primary", disabled=not cfg["api_key"]):
         if not cfg["api_key"]:
             st.error("请先在侧边栏填写 GLM API Key")
         else:
-            _do_generate(cfg, use_cache)
+            _do_generate(cfg, use_cache and not force_rebuild, use_local=source_local)
 
     # 可视化展示
     if features and scenarios:
@@ -150,13 +179,14 @@ def tab_generate(cfg: dict):
         _render_feature_tree(features, scenarios)
 
 
-def _do_generate(cfg: dict, use_cache: bool):
+def _do_generate(cfg: dict, use_cache: bool, use_local: bool = True):
     """执行场景生成流程，流式更新进度"""
     import sys, os
     sys.path.insert(0, os.getcwd())
 
     from config import (EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP,
-                        VECTOR_DB_PATH, SCENARIOS_PATH, FEATURES_PATH)
+                        VECTOR_DB_PATH, SCENARIOS_PATH, FEATURES_PATH,
+                        LOCAL_DOCS_DIR)
     from task1_rag.crawler    import DocsCrawler
     from task1_rag.rag_engine import RAGEngine
     from task1_rag.scenario_gen import ScenarioGenerator
@@ -166,12 +196,26 @@ def _do_generate(cfg: dict, use_cache: bool):
     os.makedirs("data", exist_ok=True)
 
     try:
-        # 步骤 1：爬取文档
-        status.info("📥 步骤 1/3：爬取用户手册...")
-        bar.progress(10, text="爬取文档...")
+        # 步骤 1：加载文档（优先本地，其次缓存，再次网络爬取）
+        status.info("📥 步骤 1/3：加载知识源...")
+        bar.progress(10, text="加载文档...")
         crawler = DocsCrawler(cfg["docs_url"], "data")
-        pages   = (crawler.load_cached() if use_cache else []) or crawler.crawl()
-        status.success(f"文档就绪：{len(pages)} 个块")
+
+        pages = []
+        if use_local:
+            pages = crawler.load_local_markdown(LOCAL_DOCS_DIR)
+            if pages:
+                status.success(f"✅ 已加载本地完整文档：{len(pages)} 个 Markdown 文件")
+
+        if not pages and use_cache:
+            pages = crawler.load_cached()
+            if pages:
+                status.success(f"已加载缓存文档：{len(pages)} 个块")
+
+        if not pages:
+            status.info("从网络爬取文档...")
+            pages = crawler.crawl()
+            status.success(f"文档就绪：{len(pages)} 个块")
         bar.progress(35, text="构建向量索引...")
 
         # 步骤 2：RAG 索引
@@ -360,6 +404,7 @@ def _do_execute(cfg: dict, scenarios: list):
         password      = cfg["password"],
         headless      = cfg["headless"],
         max_steps     = cfg["max_steps"],
+        page_aware    = cfg.get("page_aware", True),
         screenshot    = True,
         screenshot_dir= "reports/screenshots",
         report_dir    = "reports",
