@@ -5,6 +5,12 @@
 针对 4ga Boards 看板应用，从**本地用户手册（Markdown）** 提取功能知识，自动生成结构化测试场景，
 并由「规划-记忆-执行-验证」智能体在真实浏览器中执行验证。
 
+**多模态知识底座**：
+- 🟢 **Qdrant**（向量数据库，嵌入式持久化）—— 语义检索文档片段
+- 🟢 **Neo4j**（图数据库）—— 「功能点 → 场景 → 步骤」关系建模与多跳查询
+- 🟢 **JSON / 键值文件**（本地）—— 配置、缓存、中间结果
+- Neo4j 未启动时**自动降级**到 networkx 嵌入式实现，无外部依赖也能跑
+
 ## 项目结构
 
 ```
@@ -14,10 +20,12 @@
 ├── llm_client.py           # 统一 LLM 调用封装（OpenAI 兼容接口）
 ├── requirements.txt        # 依赖列表
 ├── .env.example            # 环境变量示例
+├── docker-compose.yml      # Neo4j 服务（可选启动）
 ├── task1_rag/
 │   ├── crawler.py          # 知识源加载（本地 Markdown 优先 / 网络爬取兜底）
-│   ├── rag_engine.py       # FAISS 向量检索引擎
-│   └── scenario_gen.py     # 功能点提取 + 测试场景生成
+│   ├── rag_engine.py       # Qdrant 向量检索引擎（FAISS fallback）
+│   ├── knowledge_graph.py  # 知识图谱（Neo4j / networkx 兜底）
+│   └── scenario_gen.py     # 功能点提取 + 测试场景生成 + 图谱写入
 ├── task2_agent/
 │   ├── memory.py           # 执行记忆
 │   ├── executor.py         # Playwright 浏览器执行器
@@ -78,13 +86,27 @@ cp .env.example .env
 > 项目使用 OpenAI 兼容接口调用，如需切换 DeepSeek / Qwen 等其他国产模型，
 > 只需修改侧边栏的 **API Base URL** 与 **模型** 即可，代码无需改动。
 
-### 4. 启动界面
+### 4. （可选）启动 Neo4j 图数据库
+
+如果有 Docker，启动 Neo4j 即可在知识图谱面板看到「Neo4j Browser 直连」效果：
+
+```bash
+docker-compose up -d neo4j
+# Neo4j Browser: http://localhost:7474   账号 neo4j / 密码 test1234
+```
+
+**不启动也没关系**——工具会自动降级到 networkx 嵌入式实现，所有功能正常。
+
+### 5. 启动界面
 
 ```bash
 streamlit run app.py
 ```
 
-浏览器会自动打开 `http://localhost:8501`
+浏览器会自动打开 `http://localhost:8501`，三个标签页：
+- 📋 任务一：场景生成（含可视化）
+- 🤖 任务二：测试执行（含报告）
+- 🕸️ 知识图谱：Category → Feature → Scenario → Step 关系图
 
 ---
 
@@ -96,8 +118,8 @@ streamlit run app.py
 2. 切换到 **Tab 1「场景生成」**
 3. 勾选「📁 使用本地完整文档（推荐）」（默认已勾选）
 4. 点击「🚀 开始生成测试场景」
-5. 等待三个步骤完成：**加载本地文档** → 构建 FAISS 向量索引 → LLM 生成功能点与场景
-6. 在下方按分类树形浏览功能点和测试场景
+5. 等待三个步骤完成：**加载本地文档** → 构建 Qdrant 向量索引 → LLM 生成功能点与场景并自动写入 Neo4j
+6. 在下方按分类树形浏览功能点和测试场景；切到 Tab 3 可看知识图谱
 
 预期：约 20-30 个功能点，60-80 个测试场景，覆盖用户/项目/看板/列表/卡片/设置 6 大分类。
 
@@ -149,3 +171,27 @@ streamlit run app.py
 - 截图保存在 `reports/screenshots/`，测试报告保存在 `reports/`
 - demo.4gaboards.com 的演示账号：`demo@demo.demo` / `demo`
 - demo 站点是公开共享的，执行测试会产生项目/看板，不影响他人
+
+---
+
+## 数据存储位置（多模态知识底座对照）
+
+| PPT 承诺的存储 | 实际位置 | 是否入库（.gitignore）|
+|---|---|---|
+| **Qdrant 向量库** | `data/vector_store/qdrant/`（嵌入式模式，无需 Docker）| ❌ 忽略（运行时生成）|
+| **Neo4j 图数据库** | `data/neo4j_data/` + `data/neo4j_logs/`（Docker 挂载）| ❌ 忽略（约 500MB）|
+| **Neo4j 兜底（无 Docker 时）** | `data/knowledge_graph.json`（networkx） | ❌ 忽略 |
+| **键值存储**（任务配置 / 缓存 / 中间结果）| `data/.cfg.json` / `data/crawled_docs.json` / `data/features.json` / `data/test_scenarios.json` | ✅ 入库（除 .cfg.json 含 API key）|
+
+```
+data/
+├── .cfg.json                  ← UI 配置（含 API key，忽略）
+├── crawled_docs.json          ← 15 个 Markdown 解析后原文
+├── features.json              ← 提取的功能点（任务一产物）
+├── test_scenarios.json        ← 生成的测试场景（任务一产物）
+├── knowledge_graph.json       ← networkx 兜底图谱（忽略）
+├── vector_store/              ← Qdrant 向量库 + chunks.pkl（忽略）
+└── neo4j_data/                ← Neo4j 数据（Docker 挂载，忽略）
+```
+
+> 组员 clone 后只需 Tab 1 重新生成一次，即可同时填充 Qdrant 和 Neo4j。

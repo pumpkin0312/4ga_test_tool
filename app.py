@@ -546,6 +546,122 @@ def _render_reports():
 # 主入口
 # ══════════════════════════════════════════════════════════════════════════════
 
+def tab_graph():
+    """知识图谱可视化（Neo4j 优先 / networkx 兜底）"""
+    st.header("🕸️ 知识图谱：功能点 → 场景 → 步骤")
+    from config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, GRAPH_PATH
+    try:
+        from task1_rag.knowledge_graph import KnowledgeGraph
+        kg = KnowledgeGraph(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, GRAPH_PATH)
+    except Exception as e:
+        st.error(f"知识图谱不可用：{e}")
+        return
+
+    backend = kg.backend_name
+    if backend == "neo4j":
+        st.success(f"🟢 后端：Neo4j（{NEO4J_URI}）"
+                   "  —  可在 [Neo4j Browser](http://localhost:7474) 直接查询")
+    else:
+        st.warning("🟡 Neo4j 不可用，使用 **networkx** 嵌入式实现。"
+                   "如需启用 Neo4j 请运行 `docker-compose up -d neo4j`。")
+
+    # 统计
+    stats = kg.stats() or {}
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("分类", stats.get("categories", 0))
+    c2.metric("功能点", stats.get("features", 0))
+    c3.metric("场景", stats.get("scenarios", 0))
+    c4.metric("步骤", stats.get("steps", 0))
+
+    if not stats.get("features"):
+        st.info("尚无图谱数据，先到 Tab 1 生成测试场景。")
+        kg.close()
+        return
+
+    # Plotly 网络图
+    try:
+        import plotly.graph_objects as go
+        import networkx as nx
+        data = kg.export_for_visualization()
+        G = nx.DiGraph()
+        for n in data["nodes"]:
+            G.add_node(n["id"], label=n["label"], name=n["name"])
+        for e in data["edges"]:
+            G.add_edge(e["source"], e["target"], type=e["type"])
+
+        # 限制规模，避免渲染卡顿
+        if G.number_of_nodes() > 200:
+            keep = [n for n, d in G.nodes(data=True) if d.get("label") != "Step"]
+            G = G.subgraph(keep).copy()
+            st.caption(f"⚠️ 节点过多（>200），可视化时隐藏 Step 层，仅展示 Category/Feature/Scenario")
+
+        pos = nx.spring_layout(G, k=0.8, iterations=40, seed=7)
+
+        color_map = {
+            "Category": "#3498db",
+            "Feature":  "#27ae60",
+            "Scenario": "#e67e22",
+            "Step":     "#95a5a6",
+        }
+        node_x, node_y, node_text, node_color = [], [], [], []
+        for n, d in G.nodes(data=True):
+            x, y = pos[n]
+            node_x.append(x); node_y.append(y)
+            node_text.append(f"{d.get('label','')}: {d.get('name','')}")
+            node_color.append(color_map.get(d.get("label"), "#999"))
+
+        edge_x, edge_y = [], []
+        for u, v in G.edges():
+            x0, y0 = pos[u]; x1, y1 = pos[v]
+            edge_x += [x0, x1, None]; edge_y += [y0, y1, None]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=edge_x, y=edge_y, mode="lines",
+                                 line=dict(width=0.4, color="#999"),
+                                 hoverinfo="none"))
+        fig.add_trace(go.Scatter(x=node_x, y=node_y, mode="markers",
+                                 marker=dict(size=10, color=node_color, line=dict(width=0.5, color="#fff")),
+                                 text=node_text, hoverinfo="text"))
+        fig.update_layout(
+            showlegend=False, hovermode="closest", height=600,
+            margin=dict(l=10, r=10, t=20, b=10),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            title="🕸️ Category → Feature → Scenario → Step",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.warning(f"图谱可视化失败：{e}")
+
+    # 浏览器
+    st.divider()
+    st.subheader("🔍 浏览图谱")
+    features = kg.list_features()
+    if features:
+        f_opts = {f"[{f['id']}] {f['name']} ({f['category']})": f["id"] for f in features}
+        chosen = st.selectbox("选择功能点", list(f_opts.keys()))
+        fid = f_opts[chosen]
+        scenarios = kg.list_scenarios_of(fid)
+        st.markdown(f"**该功能下 {len(scenarios)} 个场景：**")
+        for sc in scenarios:
+            st.markdown(f"- `{sc['id']}` **{sc['name']}** "
+                        f"<span style='color:#888;font-size:12px;'>"
+                        f"priority={sc.get('priority','')} pre={sc.get('precondition','')[:30]}"
+                        f"</span>", unsafe_allow_html=True)
+            steps = kg.list_steps_of(sc["id"])
+            if steps:
+                steps_html = "<ol style='margin-top:4px;'>"
+                for st_ in steps:
+                    steps_html += (
+                        f"<li><code>{st_['action']}</code> → {st_['target']}"
+                        f"{' = ' + repr(st_['value']) if st_['value'] else ''}"
+                        f" <span style='color:#aaa;'>— {st_['description']}</span></li>"
+                    )
+                steps_html += "</ol>"
+                st.markdown(steps_html, unsafe_allow_html=True)
+    kg.close()
+
+
 def main():
     os.makedirs("data",    exist_ok=True)
     os.makedirs("reports", exist_ok=True)
@@ -553,13 +669,19 @@ def main():
     cfg = render_sidebar()
 
     st.title("🧪 4ga Boards 智能测试工具")
-    st.caption("基于大模型的测试场景自动生成与智能执行平台")
+    st.caption("基于大模型的测试场景自动生成与智能执行平台 | Qdrant + Neo4j 知识底座")
 
-    tab1, tab2 = st.tabs(["📋 任务一：场景生成", "🤖 任务二：测试执行"])
+    tab1, tab2, tab3 = st.tabs([
+        "📋 任务一：场景生成",
+        "🤖 任务二：测试执行",
+        "🕸️ 知识图谱",
+    ])
     with tab1:
         tab_generate(cfg)
     with tab2:
         tab_execute(cfg)
+    with tab3:
+        tab_graph()
 
 
 if __name__ == "__main__":

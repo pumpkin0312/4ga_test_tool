@@ -388,7 +388,7 @@ class ScenarioGenerator:
             except Exception as e:
                 console.print(f"  [red]✗[/red] {feature.name}: {e}")
 
-        # 3. 保存
+        # 3. 保存 JSON
         with open(features_path, "w", encoding="utf-8") as f:
             json.dump([ft.model_dump() for ft in features], f, ensure_ascii=False, indent=2)
 
@@ -399,6 +399,20 @@ class ScenarioGenerator:
                       f"{len(features)} 个功能点，{len(all_scenarios)} 个测试场景[/bold green]")
         console.print(f"  功能点 → {features_path}")
         console.print(f"  测试场景 → {scenarios_path}")
+
+        # 4. 写入知识图谱（Neo4j 优先，networkx 兜底）
+        try:
+            from task1_rag.knowledge_graph import KnowledgeGraph
+            from config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, GRAPH_PATH
+            kg = KnowledgeGraph(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, GRAPH_PATH)
+            kg.ingest(
+                [ft.model_dump() for ft in features],
+                [s.model_dump()  for s in all_scenarios],
+            )
+            console.print(f"[green]知识图谱已更新（backend: {kg.backend_name}）[/green]")
+            kg.close()
+        except Exception as e:
+            console.print(f"[yellow]知识图谱更新失败（不影响主流程）：{e}[/yellow]")
 
         return features, all_scenarios
 

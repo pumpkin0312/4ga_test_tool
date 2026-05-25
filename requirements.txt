@@ -7,7 +7,12 @@ plotly>=5.22.0
 
 # RAG: embedding + vector store
 sentence-transformers>=3.0.0
-faiss-cpu>=1.8.0
+qdrant-client>=1.10.0      # 向量数据库（嵌入式持久化）
+faiss-cpu>=1.8.0           # 保留作为 fallback
+
+# Knowledge graph
+neo4j>=5.20.0              # 图数据库官方驱动
+networkx>=3.2              # 本地兜底实现 + 可视化
 
 # Documentation crawling
 requests>=2.31.0

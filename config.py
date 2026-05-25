@@ -33,9 +33,15 @@ TOP_K_RETRIEVAL = 5                      # RAG 检索返回的块数量
 # ── 文件路径 ───────────────────────────────────────────────
 DATA_DIR         = "data"
 REPORTS_DIR      = "reports"
-VECTOR_DB_PATH   = f"{DATA_DIR}/vector_store"
+VECTOR_DB_PATH   = f"{DATA_DIR}/vector_store"   # Qdrant 嵌入式持久化目录
 SCENARIOS_PATH   = f"{DATA_DIR}/test_scenarios.json"
 FEATURES_PATH    = f"{DATA_DIR}/features.json"
+GRAPH_PATH       = f"{DATA_DIR}/knowledge_graph.json"  # networkx 兜底持久化
+
+# ── 知识图谱（Neo4j 优先；连不上自动 networkx 兜底）─────────
+NEO4J_URI      = os.getenv("NEO4J_URI",  "bolt://localhost:7687")
+NEO4J_USER     = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "test1234")
 
 # ── 智能体设置 ─────────────────────────────────────────────
 MAX_STEPS_PER_SCENARIO = 20    # 每个场景最多执行步数

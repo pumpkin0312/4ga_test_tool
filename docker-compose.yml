@@ -1,0 +1,21 @@
+version: "3.8"
+
+# 可选服务：Neo4j 图数据库（启动后自动接入知识图谱模块）
+# 启动：  docker-compose up -d neo4j
+# 停止：  docker-compose down
+# Web UI: http://localhost:7474   账号 neo4j / 密码 test1234
+services:
+  neo4j:
+    image: neo4j:5.20-community
+    container_name: 4ga_neo4j
+    ports:
+      - "7474:7474"    # HTTP / Browser
+      - "7687:7687"    # Bolt 协议
+    environment:
+      NEO4J_AUTH: "neo4j/test1234"
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_max__size: 512M
+    volumes:
+      - ./data/neo4j_data:/data
+      - ./data/neo4j_logs:/logs
+    restart: unless-stopped

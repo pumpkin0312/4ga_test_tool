@@ -1,6 +1,9 @@
 """
 task1_rag/rag_engine.py
-文档分块 → 向量化 → 构建 FAISS 索引 → 提供相似度检索接口
+文档分块 → 嵌入 → 存入 Qdrant 向量库 → 提供相似度检索。
+
+后端默认走 Qdrant（嵌入式持久化模式，无需 Docker）。
+若 Qdrant 不可用，自动回退到 FAISS（保留原有实现作为兜底）。
 """
 
 import pickle
@@ -10,6 +13,8 @@ from rich.console import Console
 
 console = Console(legacy_windows=False)
 
+
+# ── 文档分块工具 ──────────────────────────────────────────────────────────────
 
 def chunk_text(text: str, chunk_size: int = 600, overlap: int = 80) -> list[str]:
     """将长文本切分成带重叠的小块"""
@@ -24,26 +29,39 @@ def chunk_text(text: str, chunk_size: int = 600, overlap: int = 80) -> list[str]
     return chunks
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# RAGEngine：Qdrant 优先 + FAISS fallback
+# ══════════════════════════════════════════════════════════════════════════════
+
 class RAGEngine:
     """
-    基于 sentence-transformers + FAISS 的本地 RAG 引擎。
-    首次运行时构建索引并缓存，之后直接加载缓存。
+    向量检索引擎。
+    - 默认使用 Qdrant 嵌入式持久化（QdrantClient(path=...)）
+    - 若 qdrant-client 未安装或初始化失败，自动回退到 FAISS
     """
+
+    COLLECTION = "docs"
 
     def __init__(self,
                  store_path: str = "data/vector_store",
                  model_name: str = "all-MiniLM-L6-v2",
                  chunk_size: int = 600,
-                 chunk_overlap: int = 80):
-        self.store_path   = Path(store_path)
-        self.model_name   = model_name
-        self.chunk_size   = chunk_size
+                 chunk_overlap: int = 80,
+                 backend: str = "qdrant"):
+        self.store_path    = Path(store_path)
+        self.model_name    = model_name
+        self.chunk_size    = chunk_size
         self.chunk_overlap = chunk_overlap
         self.store_path.mkdir(parents=True, exist_ok=True)
 
-        self._model  = None          # 懒加载，首次检索时才初始化
-        self._index  = None          # FAISS 索引
-        self._chunks: list[dict] = []  # [{text, source_title, source_url}]
+        self._model    = None          # 懒加载
+        self._chunks: list[dict] = []  # 元数据 [{text, source_title, source_url, category}]
+        self._dim      = 0
+
+        # 后端选择
+        self.backend = backend.lower()
+        self._qdrant = None
+        self._faiss  = None
 
     # ── 模型懒加载 ────────────────────────────────────────────────────────────
 
@@ -56,15 +74,28 @@ class RAGEngine:
                 self._model = SentenceTransformer(self.model_name)
                 console.print("[green]嵌入模型加载完成[/green]")
             except ImportError:
-                raise ImportError("请执行: pip install sentence-transformers faiss-cpu")
+                raise ImportError("请执行: pip install sentence-transformers")
         return self._model
+
+    # ── 后端初始化 ────────────────────────────────────────────────────────────
+
+    def _init_qdrant(self):
+        """嵌入式持久化模式：data/vector_store/qdrant/"""
+        try:
+            from qdrant_client import QdrantClient
+            qdrant_path = self.store_path / "qdrant"
+            qdrant_path.mkdir(parents=True, exist_ok=True)
+            self._qdrant = QdrantClient(path=str(qdrant_path))
+            return True
+        except Exception as e:
+            console.print(f"[yellow]Qdrant 初始化失败：{e}，回退到 FAISS[/yellow]")
+            self.backend = "faiss"
+            return False
 
     # ── 索引构建 ──────────────────────────────────────────────────────────────
 
     def build_index(self, pages: list[dict]) -> None:
         """从文档页面列表构建向量索引"""
-        import faiss
-
         console.print("[cyan]开始构建向量索引...[/cyan]")
 
         # 1. 分块
@@ -77,8 +108,8 @@ class RAGEngine:
                         "text":         chunk.strip(),
                         "source_title": page.get("title", ""),
                         "source_url":   page.get("url", ""),
+                        "category":     page.get("category", ""),
                     })
-
         console.print(f"  共 {len(self._chunks)} 个文本块，开始向量化...")
 
         # 2. 向量化（归一化后用内积 = 余弦相似度）
@@ -90,52 +121,128 @@ class RAGEngine:
             normalize_embeddings=True,
         )
         embeddings = np.array(embeddings, dtype=np.float32)
+        self._dim = embeddings.shape[1]
 
-        # 3. 构建 FAISS 索引
-        dim = embeddings.shape[1]
-        self._index = faiss.IndexFlatIP(dim)   # 内积索引
-        self._index.add(embeddings)
+        # 3. 入库（按 backend 选择）
+        if self.backend == "qdrant" and self._init_qdrant():
+            self._build_qdrant(embeddings)
+        else:
+            self._build_faiss(embeddings)
+            self.backend = "faiss"
 
-        # 4. 持久化
-        self._save(embeddings)
-        console.print(f"[green]向量索引构建完成 | 维度={dim} | 向量数={len(self._chunks)}[/green]")
-
-    def _save(self, embeddings: np.ndarray) -> None:
-        import faiss
-        faiss.write_index(self._index, str(self.store_path / "index.faiss"))
+        # 4. 持久化元数据（chunks 文本）
         with open(self.store_path / "chunks.pkl", "wb") as f:
-            pickle.dump(self._chunks, f)
-        console.print(f"[dim]索引已保存至 {self.store_path}[/dim]")
+            pickle.dump({"chunks": self._chunks, "dim": self._dim, "backend": self.backend}, f)
+        console.print(
+            f"[green]向量索引构建完成 | backend={self.backend} | "
+            f"维度={self._dim} | 向量数={len(self._chunks)}[/green]"
+        )
+
+    def _build_qdrant(self, embeddings: np.ndarray):
+        """Qdrant 入库"""
+        from qdrant_client.http.models import Distance, VectorParams, PointStruct
+
+        # 重建 collection
+        try:
+            self._qdrant.delete_collection(self.COLLECTION)
+        except Exception:
+            pass
+        self._qdrant.create_collection(
+            collection_name=self.COLLECTION,
+            vectors_config=VectorParams(size=self._dim, distance=Distance.COSINE),
+        )
+        # 批量 upsert
+        points = [
+            PointStruct(
+                id=i,
+                vector=vec.tolist(),
+                payload={
+                    "text":         self._chunks[i]["text"],
+                    "source_title": self._chunks[i]["source_title"],
+                    "source_url":   self._chunks[i]["source_url"],
+                    "category":     self._chunks[i]["category"],
+                },
+            )
+            for i, vec in enumerate(embeddings)
+        ]
+        # 分批避免单批过大
+        BATCH = 256
+        for i in range(0, len(points), BATCH):
+            self._qdrant.upsert(collection_name=self.COLLECTION, points=points[i:i + BATCH])
+        console.print(f"[dim]Qdrant 已写入 {len(points)} 个向量[/dim]")
+
+    def _build_faiss(self, embeddings: np.ndarray):
+        """FAISS 兜底实现"""
+        import faiss
+        self._faiss = faiss.IndexFlatIP(self._dim)
+        self._faiss.add(embeddings)
+        faiss.write_index(self._faiss, str(self.store_path / "index.faiss"))
+        console.print("[dim]FAISS 索引已保存[/dim]")
 
     # ── 索引加载 ──────────────────────────────────────────────────────────────
 
     def load_index(self) -> bool:
-        """尝试从磁盘加载已有索引，成功返回 True"""
-        import faiss
-        idx_path    = self.store_path / "index.faiss"
-        chunks_path = self.store_path / "chunks.pkl"
-        if idx_path.exists() and chunks_path.exists():
-            self._index = faiss.read_index(str(idx_path))
-            with open(chunks_path, "rb") as f:
-                self._chunks = pickle.load(f)
-            console.print(f"[green]向量索引加载完成，共 {len(self._chunks)} 个块[/green]")
+        """尝试加载已构建的索引，成功返回 True"""
+        meta_path = self.store_path / "chunks.pkl"
+        if not meta_path.exists():
+            return False
+        try:
+            with open(meta_path, "rb") as f:
+                data = pickle.load(f)
+            self._chunks = data["chunks"]
+            self._dim    = data["dim"]
+            saved_backend = data.get("backend", "faiss")
+
+            if saved_backend == "qdrant" and self.backend == "qdrant":
+                if not self._init_qdrant():
+                    return False
+                # 校验 collection 存在
+                cols = [c.name for c in self._qdrant.get_collections().collections]
+                if self.COLLECTION not in cols:
+                    return False
+            else:
+                # FAISS 加载
+                import faiss
+                idx_path = self.store_path / "index.faiss"
+                if not idx_path.exists():
+                    return False
+                self._faiss = faiss.read_index(str(idx_path))
+                self.backend = "faiss"
+
+            console.print(
+                f"[green]向量索引加载完成 | backend={self.backend} | "
+                f"共 {len(self._chunks)} 个块[/green]"
+            )
             return True
-        return False
+        except Exception as e:
+            console.print(f"[yellow]索引加载失败：{e}[/yellow]")
+            return False
 
     # ── 检索接口 ──────────────────────────────────────────────────────────────
 
     def retrieve(self, query: str, top_k: int = 5) -> list[dict]:
-        """
-        输入查询文本，返回最相关的 top_k 个文本块。
-        每个块包含：text / source_title / source_url / score
-        """
-        if self._index is None:
-            raise RuntimeError("索引未就绪，请先调用 build_index() 或 load_index()")
-
+        """检索 top_k 个相关块"""
         query_vec = self.model.encode([query], normalize_embeddings=True)
-        query_vec = np.array(query_vec, dtype=np.float32)
-        scores, indices = self._index.search(query_vec, top_k)
+        query_vec = np.array(query_vec, dtype=np.float32)[0]
 
+        if self.backend == "qdrant" and self._qdrant is not None:
+            hits = self._qdrant.query_points(
+                collection_name=self.COLLECTION,
+                query=query_vec.tolist(),
+                limit=top_k,
+            ).points
+            return [{
+                "text":         h.payload.get("text", ""),
+                "source_title": h.payload.get("source_title", ""),
+                "source_url":   h.payload.get("source_url", ""),
+                "category":     h.payload.get("category", ""),
+                "score":        float(h.score),
+            } for h in hits]
+
+        # FAISS 路径
+        if self._faiss is None:
+            raise RuntimeError("索引未就绪，请先调用 build_index() 或 load_index()")
+        scores, indices = self._faiss.search(np.array([query_vec], dtype=np.float32), top_k)
         results = []
         for score, idx in zip(scores[0], indices[0]):
             if 0 <= idx < len(self._chunks):
@@ -145,18 +252,14 @@ class RAGEngine:
         return results
 
     def get_context(self, query: str, top_k: int = 5) -> str:
-        """
-        检索后将结果拼接成供 LLM 使用的上下文字符串
-        """
+        """检索结果拼接成上下文字符串供 LLM 使用"""
         chunks = self.retrieve(query, top_k)
         if not chunks:
             return ""
-        parts = []
-        for i, c in enumerate(chunks, 1):
-            parts.append(
-                f"[参考片段 {i} | 来源: {c['source_title']}]\n{c['text']}"
-            )
-        return "\n\n---\n\n".join(parts)
+        return "\n\n---\n\n".join(
+            f"[参考片段 {i + 1} | 来源: {c['source_title']}]\n{c['text']}"
+            for i, c in enumerate(chunks)
+        )
 
 
 # ── 单独运行测试 ──────────────────────────────────────────────────────────────
@@ -164,17 +267,16 @@ class RAGEngine:
 if __name__ == "__main__":
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from config import DATA_DIR, VECTOR_DB_PATH, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, DOCS_BASE_URL
+    from config import (DATA_DIR, VECTOR_DB_PATH, EMBEDDING_MODEL,
+                        CHUNK_SIZE, CHUNK_OVERLAP, DOCS_BASE_URL, LOCAL_DOCS_DIR)
     from task1_rag.crawler import DocsCrawler
 
     engine = RAGEngine(VECTOR_DB_PATH, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP)
-
     if not engine.load_index():
         crawler = DocsCrawler(DOCS_BASE_URL, DATA_DIR)
-        pages   = crawler.load_cached() or crawler.crawl()
+        pages = crawler.load_local_markdown(LOCAL_DOCS_DIR) or crawler.crawl()
         engine.build_index(pages)
 
-    # 测试检索
     for query in ["如何创建卡片", "登录注册", "列表管理"]:
         print(f"\n查询: {query}")
         for r in engine.retrieve(query, top_k=2):
