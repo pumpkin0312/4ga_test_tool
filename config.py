@@ -57,3 +57,13 @@ MAX_STEPS_PER_SCENARIO = 20    # 每个场景最多执行步数
 SCREENSHOT_ON_STEP     = True  # 每步截图（用于报告）
 AGENT_TIMEOUT          = 10000 # 单个操作超时（毫秒）
 HEADLESS               = True  # True=不弹出浏览器窗口
+
+# ── 验证降级阈值（Bug-22）─────────────────────────────────
+# 当 LLM 综合验证不可用时（API 异常等），仅按规则验证通过率判定：
+#   通过率 >= VERIFY_FALLBACK_THRESHOLD → PASS，否则 FAIL
+VERIFY_FALLBACK_THRESHOLD = float(os.getenv("VERIFY_FALLBACK_THRESHOLD", "0.7"))
+
+# ── 强制降级阈值（Bug-23）─────────────────────────────────
+# 即使 LLM 综合验证给了 PASS，若规则验证通过率低于此阈值，强制改为 FAIL
+# 避免 LLM 看着步骤通过率拍 PASS、忽略真实功能失败
+FORCE_FAIL_THRESHOLD = float(os.getenv("FORCE_FAIL_THRESHOLD", "0.5"))

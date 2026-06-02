@@ -70,9 +70,20 @@ VERIFY_PROMPT = """\
 class Verifier:
     """测试结果验证器"""
 
-    def __init__(self, api_key: str, model: str, base_url: str = DEFAULT_BASE_URL):
-        self.llm   = LLMClient(api_key=api_key, model=model, base_url=base_url)
-        self.model = model
+    def __init__(self,
+                 api_key:  str,
+                 model:    str,
+                 base_url: str   = DEFAULT_BASE_URL,
+                 fallback_threshold: float = 0.7):
+        """
+        fallback_threshold: LLM 不可用时的降级判定阈值。
+            规则验证通过率 ≥ 此阈值 → PASS，否则 FAIL。
+            默认 0.7；可通过 config.VERIFY_FALLBACK_THRESHOLD 或环境变量
+            VERIFY_FALLBACK_THRESHOLD 调整。
+        """
+        self.llm                = LLMClient(api_key=api_key, model=model, base_url=base_url)
+        self.model              = model
+        self.fallback_threshold = fallback_threshold
 
     # ══════════════════════════════════════════════════════════════════════════
     # 规则验证：直接在浏览器中检查预期条件
@@ -235,12 +246,12 @@ class Verifier:
             return result
 
         except Exception as e:
-            console.print(f"[red]LLM 验证失败: {e}，使用步骤成功率降级判断[/red]")
+            console.print(f"[red]LLM 验证失败: {e}，使用步骤成功率降级判断（阈值 {self.fallback_threshold:.0%}）[/red]")
             rate = success / total if total > 0 else 0
             return {
-                "result":               "PASS" if rate >= 0.7 else "FAIL",
+                "result":               "PASS" if rate >= self.fallback_threshold else "FAIL",
                 "confidence":           rate,
-                "summary":              f"步骤成功率 {rate:.0%}（LLM 不可用，降级判断）",
+                "summary":              f"步骤成功率 {rate:.0%}（LLM 不可用，按阈值 {self.fallback_threshold:.0%} 降级判断）",
                 "expectation_results":  [],
                 "issues":               [f"LLM 验证调用失败: {e}"],
                 "suggestions":          [],

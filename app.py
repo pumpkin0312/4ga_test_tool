@@ -78,22 +78,65 @@ def load_cfg() -> dict:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def render_sidebar() -> dict:
+    # ── 模型提供商预设（model → base_url 自动联动）─────────────────────
+    PROVIDERS = {
+        "DeepSeek":   {
+            "base_url": "https://api.deepseek.com",
+            "models":   ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-flash", "deepseek-v4-pro"],
+            "help":     "DeepSeek API Key（在 platform.deepseek.com 获取）",
+        },
+        "智谱 GLM":   {
+            "base_url": "https://open.bigmodel.cn/api/paas/v4/",
+            "models":   ["glm-4-plus", "glm-4-air", "glm-4-flash", "glm-4.6"],
+            "help":     "智谱 GLM API Key（在 bigmodel.cn 获取）",
+        },
+        "通义 Qwen":  {
+            "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "models":   ["qwen-plus", "qwen-turbo", "qwen-max"],
+            "help":     "阿里通义 Qwen API Key（在 dashscope.aliyun.com 获取）",
+        },
+    }
+    def _infer_provider(base_url: str, model: str) -> str:
+        bu = (base_url or "").lower()
+        m  = (model or "").lower()
+        if "bigmodel" in bu or m.startswith("glm"):      return "智谱 GLM"
+        if "dashscope" in bu or m.startswith("qwen"):    return "通义 Qwen"
+        return "DeepSeek"
+
     with st.sidebar:
         st.title("⚙️ 配置")
         cfg = load_cfg()
 
         st.markdown("**🤖 大模型设置**")
-        api_key  = st.text_input("DeepSeek API Key", value=cfg["api_key"],
-                                  type="password", help="DeepSeek API Key（在 platform.deepseek.com 获取）")
-        model_options = ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-flash", "deepseek-v4-pro"]
-        model    = st.selectbox(
-            "模型",
-            model_options,
-            index=model_options.index(cfg["model"]) if cfg["model"] in model_options else 0,
-            help="推荐 deepseek-chat（输出 JSON 更稳定）；deepseek-reasoner / v4 模型可能产生 reasoning_content，速度较慢",
+        # 1) 选 Provider → 联动 base_url + 模型列表
+        current_provider = _infer_provider(cfg.get("base_url", ""), cfg.get("model", ""))
+        provider = st.selectbox(
+            "模型提供商",
+            list(PROVIDERS.keys()),
+            index=list(PROVIDERS.keys()).index(current_provider),
+            help="切换提供商会自动重置 Base URL 与模型列表",
         )
+        spec = PROVIDERS[provider]
+
+        # 2) API Key（label 跟随 provider）
+        api_key  = st.text_input(f"{provider} API Key", value=cfg["api_key"],
+                                  type="password", help=spec["help"])
+
+        # 3) 模型下拉框（按 provider 过滤）
+        model_options = spec["models"]
+        # 若当前缓存的 model 不在新 provider 的列表里，则取默认（列表第一项）
+        default_model_idx = (model_options.index(cfg["model"])
+                             if cfg["model"] in model_options else 0)
+        model    = st.selectbox(
+            "模型", model_options, index=default_model_idx,
+            help="推荐选 chat / plus 类（输出 JSON 更稳定）；reasoner / 思考型可能慢",
+        )
+
+        # 4) Base URL：若 provider 切换或当前不匹配，自动重置；用户仍可手动 override
+        if not cfg["base_url"] or _infer_provider(cfg["base_url"], "") != provider:
+            cfg["base_url"] = spec["base_url"]
         base_url = st.text_input("API Base URL", value=cfg["base_url"],
-                                  help="OpenAI 兼容接口；切换到 GLM/Qwen 时改这里即可")
+                                  help="OpenAI 兼容接口；通常不需要手动改，除非你用了自托管网关")
 
         st.divider()
         st.markdown("**🌐 测试目标**")
@@ -541,7 +584,12 @@ def _render_reports():
                 cols = st.columns(min(len(shots), 3))
                 for j, path in enumerate(shots[:9]):
                     if Path(path).exists():
-                        cols[j % 3].image(path, use_column_width=True)
+                        # Bug-27: 兼容两个 Streamlit 版本
+                        # use_container_width 是 1.36+ 的新 API；use_column_width 是 1.36 之前的旧 API
+                        try:
+                            cols[j % 3].image(path, use_container_width=True)
+                        except TypeError:
+                            cols[j % 3].image(path, use_column_width=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

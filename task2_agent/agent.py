@@ -39,10 +39,22 @@ class TestAgent:
         from task2_agent.resolver import PageResolver
         from llm_client           import DEFAULT_BASE_URL
 
+        # 验证降级阈值（Bug-22 / Bug-23）：优先 config dict，其次 config.py，最后默认值
+        try:
+            from config import VERIFY_FALLBACK_THRESHOLD as _DEFAULT_FB, \
+                               FORCE_FAIL_THRESHOLD     as _DEFAULT_FF
+        except ImportError:
+            _DEFAULT_FB, _DEFAULT_FF = 0.7, 0.5
+        self._verify_fallback_threshold = float(config.get("verify_fallback_threshold", _DEFAULT_FB))
+        self._force_fail_threshold      = float(config.get("force_fail_threshold",      _DEFAULT_FF))
+
         base_url = base_url or DEFAULT_BASE_URL
         self.planner  = Planner(api_key, model, base_url=base_url)
         self.memory   = AgentMemory()
-        self.verifier = Verifier(api_key, model, base_url=base_url)
+        self.verifier = Verifier(
+            api_key, model, base_url=base_url,
+            fallback_threshold=self._verify_fallback_threshold,
+        )
         self.executor = BrowserExecutor(
             target_url     = config["app_url"],
             screenshot_dir = config.get("screenshot_dir", "reports/screenshots"),
@@ -186,12 +198,25 @@ class TestAgent:
         console.print("  [dim]LLM 综合验证...[/dim]")
         verify_result = self.verifier.verify_with_llm(scenario, mem, inline_results=inline_results)
 
-        # 兜底：若规则验证全部 false，强制降级为 FAIL（防止 LLM 看着步骤通过率拍 PASS）
-        if inline_results and all(not r.get("inline_pass") for r in inline_results):
-            if verify_result.get("result") == "PASS":
+        # 兜底降级（Bug-23）：基于规则验证实际通过率强制纠正 LLM 拍脑袋的 PASS
+        #   - 100% 失败                       → 必须 FAIL
+        #   - 通过率 < FORCE_FAIL_THRESHOLD   → 也强制 FAIL
+        #   - 通过率 >= 阈值                  → 信任 LLM 综合判断
+        if inline_results:
+            total_exp   = len(inline_results)
+            passed_exp  = sum(1 for r in inline_results if r.get("inline_pass"))
+            pass_rate   = passed_exp / total_exp if total_exp > 0 else 0.0
+            verify_result["inline_pass_rate"] = round(pass_rate, 3)
+
+            if verify_result.get("result") == "PASS" and pass_rate < self._force_fail_threshold:
+                if pass_rate == 0:
+                    reason = "所有规则验证均未通过"
+                else:
+                    reason = (f"仅 {passed_exp}/{total_exp} 条规则验证通过"
+                              f"（{pass_rate:.0%} < 阈值 {self._force_fail_threshold:.0%}）")
                 verify_result["result"]  = "FAIL"
-                verify_result["summary"] = "（强制降级）所有规则验证均未通过：" + verify_result.get("summary", "")
-                console.print("  [red]规则验证全部失败，强制将结果降级为 FAIL[/red]")
+                verify_result["summary"] = f"（强制降级）{reason}：" + verify_result.get("summary", "")
+                console.print(f"  [red]规则验证 {reason}，强制将结果降级为 FAIL[/red]")
 
         result = self._build_result(scenario, mem, verify_result)
         result["expectations_inline"] = inline_results
@@ -283,6 +308,8 @@ class TestAgent:
             "steps_total":         total,
             "steps_passed":        passed,
             "step_success_rate":   passed / total if total > 0 else 0,
+            "inline_pass_rate":    verify.get("inline_pass_rate"),       # Bug-23：规则验证实际通过率
+            "force_fail_threshold": self._force_fail_threshold,           # 强制降级阈值（可解释性）
             "start_time":          mem.start_time,
             "end_time":            mem.end_time or datetime.now().isoformat(),
             "screenshots":         [a.screenshot_path for a in mem.actions if a.screenshot_path],
