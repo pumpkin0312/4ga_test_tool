@@ -27,6 +27,7 @@ console = Console(legacy_windows=False)
 # 不涉及具体元素定位的 action：跳过 resolver（直接放行）
 _NO_RESOLVE_ACTIONS = {
     "navigate", "wait", "sleep", "press",
+    "setinputfiles", "set_input_files", "upload", "upload_file",
     "login", "enter_first_project", "open_first_board",  # planner 注入的虚拟动作
 }
 

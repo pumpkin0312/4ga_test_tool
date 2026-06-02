@@ -307,7 +307,16 @@ class _NetworkXBackend(_GraphBackend):
 
     def _persist(self):
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        data = self.export_for_visualization()
+        data = {
+            "nodes": [
+                {"id": f"{n[0]}::{n[1]}", **attrs}
+                for n, attrs in self._g.nodes(data=True)
+            ],
+            "edges": [
+                {"source": f"{u[0]}::{u[1]}", "target": f"{v[0]}::{v[1]}", **attrs}
+                for u, v, attrs in self._g.edges(data=True)
+            ],
+        }
         with open(self._path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -319,11 +328,13 @@ class _NetworkXBackend(_GraphBackend):
             for n in data.get("nodes", []):
                 # n["id"] 形如 "Feature::f001"，拆回 tuple key
                 kind, _, key = n["id"].partition("::")
-                self._g.add_node((kind, key), label=n.get("label"), name=n.get("name"))
+                attrs = {k: v for k, v in n.items() if k != "id"}
+                self._g.add_node((kind, key), **attrs)
             for e in data.get("edges", []):
                 sk, _, sv = e["source"].partition("::")
                 tk, _, tv = e["target"].partition("::")
-                self._g.add_edge((sk, sv), (tk, tv), type=e.get("type"))
+                attrs = {k: v for k, v in e.items() if k not in ("source", "target")}
+                self._g.add_edge((sk, sv), (tk, tv), **attrs)
         except Exception as e:
             console.print(f"[yellow]networkx 缓存加载失败：{e}[/yellow]")
 

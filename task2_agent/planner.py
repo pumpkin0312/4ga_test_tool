@@ -71,6 +71,14 @@ class Planner:
     _BOARD_KW        = ["看板", "board", "列表", "list", "卡片", "card"]
     _DASHBOARD_KW    = ["仪表板", "仪表盘", "dashboard", "首页", "home"]
 
+    def _contains_keyword(self, text: str, keyword: str) -> bool:
+        """英文关键词按完整单词匹配，避免 dashboard 被 board 误命中。"""
+        if not text or not keyword:
+            return False
+        if re.search(r"[a-zA-Z]", keyword):
+            return re.search(rf"\b{re.escape(keyword)}\b", text, re.IGNORECASE) is not None
+        return keyword in text
+
     def prepare_steps(self,
                       scenario: dict,
                       app_url:  str,
@@ -89,12 +97,12 @@ class Planner:
         if scenario.get("steps"):
             first_step_target = (scenario["steps"][0].get("target") or "").lower()
 
-        is_login_test = any(kw in precondition for kw in self._LOGIN_TEST_KW) or \
+        is_login_test = any(self._contains_keyword(precondition, kw) for kw in self._LOGIN_TEST_KW) or \
                         any(kw in first_step_target for kw in
                             ["input[name='emailorusername']", "input[type='password']",
                              "input[type='email']"])
-        needs_board   = any(kw in precondition for kw in self._BOARD_KW)
-        needs_project = needs_board or any(kw in precondition for kw in self._PROJECT_KW)
+        needs_board   = any(self._contains_keyword(precondition, kw) for kw in self._BOARD_KW)
+        needs_project = needs_board or any(self._contains_keyword(precondition, kw) for kw in self._PROJECT_KW)
 
         steps: list[dict] = []
 

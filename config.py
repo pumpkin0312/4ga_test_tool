@@ -1,28 +1,37 @@
 """
 config.py - 全局配置
-修改 GLM_API_KEY 后即可运行
+修改 DEEPSEEK_API_KEY 后即可运行
 """
 import os
 from dotenv import load_dotenv
 
 load_dotenv()  # 支持从 .env 文件读取
 
-# ── 智谱 GLM API（通过 OpenAI 兼容接口调用）─────────────
-GLM_API_KEY  = os.getenv("GLM_API_KEY", "your-api-key-here")
-GLM_BASE_URL = os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4/")
-LLM_MODEL    = os.getenv("LLM_MODEL", "glm-4-plus")  # 可选: glm-4-plus / glm-4-air / glm-4-flash / glm-4.6
-# 提示：glm-4.6 是思考型模型，速度慢且 thinking 会占用 max_tokens，建议优先用 glm-4-plus
+# ── DeepSeek API（通过 OpenAI 兼容接口调用）─────────────
+# 兼容旧版 GLM_* 环境变量，避免其他模块导入名大范围改动。
+DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY", os.getenv("GLM_API_KEY", "your-deepseek-api-key"))
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", os.getenv("GLM_BASE_URL", "https://api.deepseek.com"))
+LLM_MODEL         = os.getenv("LLM_MODEL", "deepseek-chat")  # 可选: deepseek-chat / deepseek-reasoner / deepseek-v4-flash
+
+# 旧模块仍从 config 导入 GLM_*，这里作为兼容别名保留。
+GLM_API_KEY  = DEEPSEEK_API_KEY
+GLM_BASE_URL = DEEPSEEK_BASE_URL
 
 # ── 目标应用 ───────────────────────────────────────────────
 TARGET_APP_URL = "https://demo.4gaboards.com"
 DOCS_BASE_URL  = "https://docs.4gaboards.com"
 
 # 本地完整文档目录（推荐使用）。网络爬取作为 fallback。
-LOCAL_DOCS_DIR = "../4gaboards_doc/4gaboards"
+LOCAL_DOCS_DIR = "4gaboards_doc/4gaboards"
 
 # 演示账号（4ga Boards demo 站点默认账号）
 DEMO_USERNAME = "demo@demo.demo"
 DEMO_PASSWORD = "demo"
+
+# 浏览器与目标应用语言。demo 账号是共享账号，语言偏好可能被别人改动；
+# 测试时强制英文，避免 selector 文本和文档语言不一致。
+BROWSER_LOCALE      = os.getenv("BROWSER_LOCALE", "en-US")
+TARGET_APP_LANGUAGE = os.getenv("TARGET_APP_LANGUAGE", "en")
 
 # ── RAG 设置 ───────────────────────────────────────────────
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"   # 本地嵌入模型，无需额外 API

@@ -1,4 +1,4 @@
-# LLM API (GLM via OpenAI-compatible endpoint)
+# LLM API (DeepSeek via OpenAI-compatible endpoint)
 openai>=1.40.0
 
 # Web UI

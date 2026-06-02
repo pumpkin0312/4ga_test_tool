@@ -55,11 +55,25 @@ class BrowserExecutor:
         )
         self._context = self._browser.new_context(
             viewport={"width": 1280, "height": 800},
-            locale="zh-CN",
+            locale=self._browser_locale(),
         )
         self._page = self._context.new_page()
         self._page.set_default_timeout(self.timeout)
         console.print("[green]浏览器已启动[/green]")
+
+    def _browser_locale(self) -> str:
+        try:
+            from config import BROWSER_LOCALE
+            return BROWSER_LOCALE
+        except Exception:
+            return "en-US"
+
+    def _target_app_language(self) -> str:
+        try:
+            from config import TARGET_APP_LANGUAGE
+            return TARGET_APP_LANGUAGE
+        except Exception:
+            return "en"
 
     def stop(self):
         try:
@@ -138,8 +152,43 @@ class BrowserExecutor:
             except Exception as e:
                 console.print(f"[yellow]输入失败 '{selector}': {e}[/yellow]")
         except Exception as e:
-            console.print(f"[yellow]输入失败 '{selector}': {e}[/yellow]")
+                console.print(f"[yellow]输入失败 '{selector}': {e}[/yellow]")
         return False
+
+    def set_input_files(self, selector: str, file_path: str) -> bool:
+        """上传文件。支持直接设置 file input，也支持点击按钮触发 file chooser。"""
+        try:
+            path = Path(file_path).expanduser()
+            if not path.is_absolute():
+                path = Path.cwd() / path
+            path = path.resolve()
+            if not path.exists():
+                console.print(f"[yellow]上传文件不存在: {path}[/yellow]")
+                return False
+
+            target = (selector or "input[type='file']").strip()
+            target_lower = target.lower()
+
+            if "input" in target_lower:
+                try:
+                    self._page.locator(target).first.set_input_files(str(path), timeout=self.timeout)
+                    return True
+                except Exception:
+                    self._page.locator("input[type='file']").first.set_input_files(str(path), timeout=self.timeout)
+                    return True
+
+            try:
+                with self._page.expect_file_chooser(timeout=self.timeout) as chooser_info:
+                    if not self.click(target):
+                        return False
+                chooser_info.value.set_files(str(path))
+                return True
+            except Exception:
+                self._page.locator("input[type='file']").first.set_input_files(str(path), timeout=self.timeout)
+                return True
+        except Exception as e:
+            console.print(f"[yellow]上传文件失败 '{selector}': {e}[/yellow]")
+            return False
 
     def press_key(self, key: str, selector: str = None) -> bool:
         """按键（Enter / Escape / Tab 等）"""
@@ -545,6 +594,13 @@ class BrowserExecutor:
 
             url     = self.get_url()
             success = "/login" not in url and "/register" not in url
+            if success:
+                self._page.wait_for_function(
+                    """() => document.body.innerText.trim().length > 0
+                        && document.querySelectorAll('button,a,input,[role="button"]').length > 0""",
+                    timeout=30000,
+                )
+                self._ensure_app_language()
             console.print(f"[{'green' if success else 'red'}]"
                           f"登录{'成功' if success else '失败'}（URL: {url}）[/]")
             if not success:
@@ -555,6 +611,61 @@ class BrowserExecutor:
             console.print(f"[red]登录异常: {e}[/red]")
             self.screenshot("login_exception")
             return False
+
+    def _ensure_app_language(self) -> None:
+        """把共享 demo 账号的界面语言固定为英文，避免被其他使用者改成俄语等语言。"""
+        language = self._target_app_language()
+        if not language:
+            return
+
+        try:
+            changed = self._page.evaluate(
+                """async (language) => {
+                    const cookie = document.cookie
+                        .split('; ')
+                        .find((item) => item.startsWith('accessToken='));
+                    const token = cookie ? cookie.split('=')[1] : '';
+                    if (!token) return false;
+
+                    let userId = '';
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        userId = payload.sub || '';
+                    } catch (e) {
+                        return false;
+                    }
+                    if (!userId) return false;
+
+                    const headers = {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    };
+                    const current = await fetch(`/api/user-prefs/${userId}`, { headers });
+                    if (!current.ok) return false;
+                    const before = await current.json();
+                    const oldLanguage = before?.item?.language || '';
+
+                    localStorage.setItem('i18nextLng', language);
+                    if (oldLanguage === language) return false;
+
+                    const updated = await fetch(`/api/user-prefs/${userId}`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify({ language }),
+                    });
+                    return updated.ok;
+                }""",
+                language,
+            )
+            if changed:
+                self._page.reload(wait_until="domcontentloaded", timeout=30000)
+                self._page.wait_for_function(
+                    """() => document.body.innerText.trim().length > 0
+                        && document.querySelectorAll('button,a,input,[role="button"]').length > 0""",
+                    timeout=30000,
+                )
+        except Exception as e:
+            console.print(f"[yellow]设置应用语言失败（不影响主流程）：{e}[/yellow]")
 
     # ── 统一步骤执行入口 ──────────────────────────────────────────────────────
 
@@ -586,6 +697,9 @@ class BrowserExecutor:
 
             elif action in ("input", "type", "fill"):
                 success = self.input_text(target, value)
+
+            elif action in ("setinputfiles", "set_input_files", "upload", "upload_file"):
+                success = self.set_input_files(target, value)
 
             elif action == "select":
                 try:

@@ -1,13 +1,13 @@
 """
 llm_client.py
-统一的大模型调用封装。默认走智谱 GLM 的 OpenAI 兼容接口；
-只需切换 base_url 和 model 即可对接 DeepSeek / Qwen 等其他国产模型。
+统一的大模型调用封装。默认走 DeepSeek 的 OpenAI 兼容接口；
+只需切换 base_url 和 model 即可对接 GLM / Qwen 等其他国产模型。
 """
 
 from openai import OpenAI
 
 
-DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4/"
+DEFAULT_BASE_URL = "https://api.deepseek.com"
 
 
 class LLMClient:
@@ -15,7 +15,7 @@ class LLMClient:
 
     def __init__(self,
                  api_key: str,
-                 model: str = "glm-4-plus",
+                 model: str = "deepseek-chat",
                  base_url: str = DEFAULT_BASE_URL):
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model  = model
@@ -27,8 +27,8 @@ class LLMClient:
         """
         发送单轮 user 消息，返回模型生成的纯文本。
 
-        兼容思考型模型（GLM-4.6 等）：当 content 为空时回退到 reasoning_content。
-        思考型模型的 thinking 会占用 max_tokens 预算，建议给非思考型场景用 glm-4-plus。
+        兼容思考型模型（deepseek-reasoner 等）：当 content 为空时回退到 reasoning_content。
+        思考型模型的 thinking 会占用 max_tokens 预算，常规 JSON 输出建议用 deepseek-chat。
         """
         resp = self.client.chat.completions.create(
             model=self.model,

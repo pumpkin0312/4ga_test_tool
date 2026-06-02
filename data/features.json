@@ -1,173 +1,42 @@
 [
   {
     "id": "f001",
-    "name": "用户注册",
-    "description": "新用户通过邮箱密码或Google账户创建账户",
+    "name": "登录",
+    "description": "用户通过邮箱和密码或SSO登录系统",
     "category": "用户管理",
     "scenarios": [
       {
         "id": "f001_s01",
-        "name": "通过邮箱密码成功注册新用户",
+        "name": "使用演示账号成功登录",
         "feature_id": "f001",
         "priority": "high",
-        "precondition": "用户已打开登录页面",
+        "precondition": "用户未登录，访问登录页面",
         "steps": [
           {
-            "action": "click",
-            "target": "Sign up",
-            "value": "",
-            "description": "点击注册按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[name='emailOrUsername']",
-            "value": "newuser@example.com",
-            "description": "输入邮箱地址"
-          },
-          {
-            "action": "input",
-            "target": "input[type='password']",
-            "value": "Password123!",
-            "description": "输入密码"
-          },
-          {
-            "action": "click",
-            "target": "button[type='submit']",
-            "value": "",
-            "description": "点击提交按钮完成注册"
+            "action": "login",
+            "target": "login_form",
+            "value": "demo@demo.demo|demo",
+            "description": "使用演示账号登录并等待 Dashboard 渲染完成"
           }
         ],
         "expectations": [
           {
             "condition": "url_contains",
             "target": "",
-            "value": "dashboard",
-            "description": "注册成功后跳转到仪表板页面"
-          }
-        ],
-        "tags": [
-          "regression",
-          "smoke"
-        ]
-      },
-      {
-        "id": "f001_s02",
-        "name": "通过Google账户成功注册新用户",
-        "feature_id": "f001",
-        "priority": "medium",
-        "precondition": "用户已打开登录页面",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Sign up",
-            "value": "",
-            "description": "点击注册按钮"
+            "value": "/",
+            "description": "登录成功后 URL 为根路径"
           },
-          {
-            "action": "click",
-            "target": "Continue with Google",
-            "value": "",
-            "description": "点击Google注册选项"
-          }
-        ],
-        "expectations": [
           {
             "condition": "visible",
-            "target": "Google sign in",
+            "target": "Add Project",
             "value": "",
-            "description": "显示Google登录界面"
-          }
-        ],
-        "tags": [
-          "oauth",
-          "integration"
-        ]
-      },
-      {
-        "id": "f001_s03",
-        "name": "使用已存在邮箱注册失败",
-        "feature_id": "f001",
-        "priority": "medium",
-        "precondition": "用户已打开登录页面",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Sign up",
-            "value": "",
-            "description": "点击注册按钮"
+            "description": "Dashboard 上显示『Add Project』按钮"
           },
-          {
-            "action": "input",
-            "target": "input[name='emailOrUsername']",
-            "value": "demo@demo.demo",
-            "description": "输入已存在的邮箱地址"
-          },
-          {
-            "action": "input",
-            "target": "input[type='password']",
-            "value": "demo",
-            "description": "输入密码"
-          },
-          {
-            "action": "click",
-            "target": "button[type='submit']",
-            "value": "",
-            "description": "点击提交按钮"
-          }
-        ],
-        "expectations": [
           {
             "condition": "visible",
-            "target": "Email already in use",
+            "target": "DD",
             "value": "",
-            "description": "显示邮箱已被使用的错误提示"
-          }
-        ],
-        "tags": [
-          "negative",
-          "validation"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f002",
-    "name": "用户登录",
-    "description": "使用邮箱密码或Google账户登录系统",
-    "category": "用户管理",
-    "scenarios": [
-      {
-        "id": "f002_s01",
-        "name": "使用邮箱密码成功登录",
-        "feature_id": "f002",
-        "priority": "high",
-        "precondition": "用户已访问登录页面",
-        "steps": [
-          {
-            "action": "input",
-            "target": "input[name='emailOrUsername']",
-            "value": "demo@demo.demo",
-            "description": "输入邮箱"
-          },
-          {
-            "action": "input",
-            "target": "input[type='password']",
-            "value": "demo",
-            "description": "输入密码"
-          },
-          {
-            "action": "click",
-            "target": "button[type='submit']",
-            "value": "",
-            "description": "点击登录按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "url_contains",
-            "target": "",
-            "value": "dashboard",
-            "description": "成功登录后跳转到仪表板页面"
+            "description": "用户菜单显示为 DD"
           }
         ],
         "tags": [
@@ -176,48 +45,27 @@
         ]
       },
       {
-        "id": "f002_s02",
-        "name": "使用Google账户登录",
-        "feature_id": "f002",
+        "id": "f001_s02",
+        "name": "使用无效密码登录失败",
+        "feature_id": "f001",
         "priority": "medium",
-        "precondition": "用户已访问登录页面且Google SSO已启用",
+        "precondition": "用户未登录，访问登录页面",
         "steps": [
           {
-            "action": "click",
-            "target": "Sign in with Google",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/login",
             "value": "",
-            "description": "点击Google登录按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text='Sign in'",
-            "value": "",
-            "description": "显示Google登录页面"
-          }
-        ],
-        "tags": [
-          "login",
-          "google-sso"
-        ]
-      },
-      {
-        "id": "f002_s03",
-        "name": "使用错误密码登录失败",
-        "feature_id": "f002",
-        "priority": "medium",
-        "precondition": "用户已访问登录页面",
-        "steps": [
+            "description": "打开登录页面"
+          },
           {
             "action": "input",
             "target": "input[name='emailOrUsername']",
             "value": "demo@demo.demo",
-            "description": "输入邮箱"
+            "description": "输入正确的邮箱"
           },
           {
             "action": "input",
-            "target": "input[type='password']",
+            "target": "input[name='password']",
             "value": "wrongpassword",
             "description": "输入错误密码"
           },
@@ -225,20 +73,119 @@
             "action": "click",
             "target": "button[type='submit']",
             "value": "",
-            "description": "点击登录按钮"
+            "description": "点击『Log in』提交按钮"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "url_contains",
+            "target": "",
+            "value": "/login",
+            "description": "登录失败后仍停留在登录页面"
+          },
+          {
+            "condition": "visible",
+            "target": "button[type='submit']",
+            "value": "",
+            "description": "提交按钮仍然可见，页面未跳转"
+          }
+        ],
+        "tags": [
+          "login",
+          "negative"
+        ]
+      },
+      {
+        "id": "f001_s03",
+        "name": "SSO 登录按钮可见",
+        "feature_id": "f001",
+        "priority": "low",
+        "precondition": "用户未登录，访问登录页面",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/login",
+            "value": "",
+            "description": "打开登录页面"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "text='Invalid credentials'",
+            "target": "Continue with Google",
             "value": "",
-            "description": "显示错误提示信息"
+            "description": "Google SSO 按钮可见"
+          },
+          {
+            "condition": "visible",
+            "target": "Continue with Microsoft",
+            "value": "",
+            "description": "Microsoft SSO 按钮可见"
+          },
+          {
+            "condition": "visible",
+            "target": "Continue with GitHub",
+            "value": "",
+            "description": "GitHub SSO 按钮可见"
           }
         ],
         "tags": [
           "login",
-          "negative-test"
+          "sso"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f002",
+    "name": "登出",
+    "description": "用户退出当前登录状态",
+    "category": "用户管理",
+    "scenarios": [
+      {
+        "id": "f002_s01",
+        "name": "通过用户菜单成功登出",
+        "feature_id": "f002",
+        "priority": "high",
+        "precondition": "用户已使用演示账号 demo@demo.demo / demo 登录成功，当前位于首页（/）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "DD",
+            "value": "",
+            "description": "点击右上角用户头像/标识（DD）打开用户菜单"
+          },
+          {
+            "action": "click",
+            "target": "Log out",
+            "value": "",
+            "description": "在用户菜单中点击『Log out』按钮"
+          },
+          {
+            "action": "wait",
+            "target": "Email or username",
+            "value": "2",
+            "description": "等待登出后的登录页渲染完成"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "input[name='emailOrUsername']",
+            "value": "",
+            "description": "登出后重新显示用户名/邮箱输入框"
+          },
+          {
+            "condition": "visible",
+            "target": "button[type='submit']",
+            "value": "",
+            "description": "登出后重新显示登录提交按钮"
+          }
+        ],
+        "tags": [
+          "登出",
+          "用户管理",
+          "happy path"
         ]
       }
     ]
@@ -246,7 +193,7 @@
   {
     "id": "f003",
     "name": "修改密码",
-    "description": "用户在账户设置中更新登录密码",
+    "description": "用户更改自己的登录密码",
     "category": "用户管理",
     "scenarios": [
       {
@@ -254,19 +201,31 @@
         "name": "成功修改密码",
         "feature_id": "f003",
         "priority": "high",
-        "precondition": "用户已登录",
+        "precondition": "用户已登录（demo@demo.demo / demo）",
         "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "访问首页"
+          },
+          {
+            "action": "click",
+            "target": "DD",
+            "value": "",
+            "description": "点击用户菜单（显示为 DD）"
+          },
           {
             "action": "click",
             "target": "Settings",
             "value": "",
-            "description": "点击设置按钮"
+            "description": "在用户菜单中点击 Settings"
           },
           {
             "action": "click",
-            "target": "Change Password",
+            "target": "Authentication",
             "value": "",
-            "description": "点击修改密码选项"
+            "description": "在设置弹窗中点击 Authentication 标签"
           },
           {
             "action": "input",
@@ -277,108 +236,65 @@
           {
             "action": "input",
             "target": "input[name='newPassword']",
-            "value": "newpassword123",
+            "value": "newDemo123",
             "description": "输入新密码"
           },
           {
             "action": "input",
             "target": "input[name='confirmPassword']",
-            "value": "newpassword123",
+            "value": "newDemo123",
             "description": "确认新密码"
           },
           {
             "action": "click",
-            "target": "Save",
+            "target": "button[type='submit']",
             "value": "",
             "description": "点击保存按钮"
           }
         ],
         "expectations": [
           {
-            "condition": "text_contains",
-            "target": "Password updated successfully",
+            "condition": "visible",
+            "target": "text=Password changed successfully",
             "value": "",
-            "description": "验证密码更新成功提示"
+            "description": "页面显示密码修改成功提示"
           }
         ],
         "tags": [
+          "修改密码",
           "happy path"
         ]
       },
       {
         "id": "f003_s02",
-        "name": "当前密码错误时修改密码失败",
+        "name": "修改密码 - 新密码与确认密码不匹配",
         "feature_id": "f003",
         "priority": "medium",
-        "precondition": "用户已登录",
+        "precondition": "用户已登录（demo@demo.demo / demo）",
         "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "访问首页"
+          },
+          {
+            "action": "click",
+            "target": "DD",
+            "value": "",
+            "description": "点击用户菜单（显示为 DD）"
+          },
           {
             "action": "click",
             "target": "Settings",
             "value": "",
-            "description": "点击设置按钮"
+            "description": "在用户菜单中点击 Settings"
           },
           {
             "action": "click",
-            "target": "Change Password",
+            "target": "Authentication",
             "value": "",
-            "description": "点击修改密码选项"
-          },
-          {
-            "action": "input",
-            "target": "input[name='currentPassword']",
-            "value": "wrongpassword",
-            "description": "输入错误的当前密码"
-          },
-          {
-            "action": "input",
-            "target": "input[name='newPassword']",
-            "value": "newpassword123",
-            "description": "输入新密码"
-          },
-          {
-            "action": "input",
-            "target": "input[name='confirmPassword']",
-            "value": "newpassword123",
-            "description": "确认新密码"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "text_contains",
-            "target": "Current password is incorrect",
-            "value": "",
-            "description": "验证当前密码错误提示"
-          }
-        ],
-        "tags": [
-          "negative path"
-        ]
-      },
-      {
-        "id": "f003_s03",
-        "name": "新密码与确认密码不匹配时修改失败",
-        "feature_id": "f003",
-        "priority": "medium",
-        "precondition": "用户已登录",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Settings",
-            "value": "",
-            "description": "点击设置按钮"
-          },
-          {
-            "action": "click",
-            "target": "Change Password",
-            "value": "",
-            "description": "点击修改密码选项"
+            "description": "在设置弹窗中点击 Authentication 标签"
           },
           {
             "action": "input",
@@ -389,94 +305,404 @@
           {
             "action": "input",
             "target": "input[name='newPassword']",
-            "value": "newpassword123",
+            "value": "newDemo123",
             "description": "输入新密码"
           },
           {
             "action": "input",
             "target": "input[name='confirmPassword']",
-            "value": "differentpassword",
-            "description": "输入不同的确认密码"
+            "value": "differentPassword",
+            "description": "输入不匹配的确认密码"
           },
           {
             "action": "click",
-            "target": "Save",
+            "target": "button[type='submit']",
             "value": "",
             "description": "点击保存按钮"
           }
         ],
         "expectations": [
           {
-            "condition": "text_contains",
-            "target": "New passwords do not match",
+            "condition": "visible",
+            "target": "text=Passwords do not match",
             "value": "",
-            "description": "验证密码不匹配提示"
+            "description": "页面显示密码不匹配错误提示"
           }
         ],
         "tags": [
-          "negative path"
+          "修改密码",
+          "错误处理"
+        ]
+      },
+      {
+        "id": "f003_s03",
+        "name": "修改密码 - 当前密码错误",
+        "feature_id": "f003",
+        "priority": "medium",
+        "precondition": "用户已登录（demo@demo.demo / demo）",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "访问首页"
+          },
+          {
+            "action": "click",
+            "target": "DD",
+            "value": "",
+            "description": "点击用户菜单（显示为 DD）"
+          },
+          {
+            "action": "click",
+            "target": "Settings",
+            "value": "",
+            "description": "在用户菜单中点击 Settings"
+          },
+          {
+            "action": "click",
+            "target": "Authentication",
+            "value": "",
+            "description": "在设置弹窗中点击 Authentication 标签"
+          },
+          {
+            "action": "input",
+            "target": "input[name='currentPassword']",
+            "value": "wrongPassword",
+            "description": "输入错误的当前密码"
+          },
+          {
+            "action": "input",
+            "target": "input[name='newPassword']",
+            "value": "newDemo123",
+            "description": "输入新密码"
+          },
+          {
+            "action": "input",
+            "target": "input[name='confirmPassword']",
+            "value": "newDemo123",
+            "description": "确认新密码"
+          },
+          {
+            "action": "click",
+            "target": "button[type='submit']",
+            "value": "",
+            "description": "点击保存按钮"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "text=Current password is incorrect",
+            "value": "",
+            "description": "页面显示当前密码错误提示"
+          }
+        ],
+        "tags": [
+          "修改密码",
+          "错误处理"
         ]
       }
     ]
   },
   {
     "id": "f004",
-    "name": "创建项目",
-    "description": "通过侧边栏或按钮新建项目容器",
-    "category": "项目管理",
+    "name": "修改用户资料",
+    "description": "管理员编辑用户信息，包括邮箱、用户名、权限等；用户更改自己的用户名、邮箱等个人信息",
+    "category": "用户管理",
     "scenarios": [
       {
         "id": "f004_s01",
-        "name": "通过侧边栏创建项目",
+        "name": "管理员成功编辑用户资料（修改显示名称）",
         "feature_id": "f004",
         "priority": "high",
-        "precondition": "用户已登录并进入仪表板页面",
+        "precondition": "用户已使用管理员账号 demo@demo.demo / demo 登录系统，并停留在 Dashboard 页面（URL 为 /）",
         "steps": [
           {
             "action": "click",
-            "target": "Create new project",
+            "target": "DD",
             "value": "",
-            "description": "点击侧边栏的『Create new project』按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[name='name']",
-            "value": "Test Project",
-            "description": "输入项目名称"
+            "description": "点击右上角用户菜单（显示为 DD）"
           },
           {
             "action": "click",
-            "target": "Create",
+            "target": "Settings",
             "value": "",
-            "description": "点击创建按钮确认"
+            "description": "在下拉菜单中点击『Settings』打开设置弹窗"
+          },
+          {
+            "action": "click",
+            "target": "input[name='displayName']",
+            "value": "",
+            "description": "点击显示名称输入框"
+          },
+          {
+            "action": "input",
+            "target": "input[name='displayName']",
+            "value": "Admin Updated",
+            "description": "清空并输入新的显示名称『Admin Updated』"
+          },
+          {
+            "action": "click",
+            "target": "button[type='submit']",
+            "value": "",
+            "description": "点击『Save』按钮保存资料"
           }
         ],
         "expectations": [
           {
-            "condition": "url_contains",
-            "target": "/project/",
+            "condition": "visible",
+            "target": "text=Admin Updated",
             "value": "",
-            "description": "URL应包含项目路径"
-          },
-          {
-            "condition": "text_contains",
-            "target": "Test Project",
-            "value": "",
-            "description": "页面应显示新创建的项目名称"
+            "description": "页面右上角用户菜单显示更新后的名称『Admin Updated』"
           }
         ],
         "tags": [
-          "project",
-          "creation",
-          "sidebar"
+          "user_management",
+          "profile",
+          "happy_path"
         ]
       },
       {
         "id": "f004_s02",
-        "name": "通过仪表板按钮创建项目",
+        "name": "管理员成功修改用户邮箱",
+        "feature_id": "f004",
+        "priority": "high",
+        "precondition": "用户已登录，且 Settings 弹窗已打开（通过点击 DD -> Settings 进入）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "input[name='email']",
+            "value": "",
+            "description": "点击邮箱输入框"
+          },
+          {
+            "action": "input",
+            "target": "input[name='email']",
+            "value": "updated@demo.demo",
+            "description": "输入新邮箱 updated@demo.demo"
+          },
+          {
+            "action": "click",
+            "target": "button[type='submit']",
+            "value": "",
+            "description": "点击『Save』按钮保存邮箱修改"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "text=Settings",
+            "value": "",
+            "description": "弹窗仍然打开，且无错误提示，表示保存成功"
+          }
+        ],
+        "tags": [
+          "user_management",
+          "email",
+          "happy_path"
+        ]
+      },
+      {
+        "id": "f004_s03",
+        "name": "管理员取消编辑用户资料",
         "feature_id": "f004",
         "priority": "medium",
-        "precondition": "用户已登录并进入仪表板页面",
+        "precondition": "用户已登录，且 Settings 弹窗已打开（通过点击 DD -> Settings 进入）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "input[name='displayName']",
+            "value": "",
+            "description": "点击显示名称输入框"
+          },
+          {
+            "action": "input",
+            "target": "input[name='displayName']",
+            "value": "Temporary Name",
+            "description": "输入一个临时名称『Temporary Name』"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Cancel')",
+            "value": "",
+            "description": "点击『Cancel』按钮取消修改"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "not_visible",
+            "target": "text=Temporary Name",
+            "value": "",
+            "description": "用户菜单中不显示临时名称，说明修改未保存"
+          },
+          {
+            "condition": "visible",
+            "target": "text=DD",
+            "value": "",
+            "description": "用户菜单仍显示原始名称 DD"
+          }
+        ],
+        "tags": [
+          "user_management",
+          "profile",
+          "cancel"
+        ]
+      },
+      {
+        "id": "f004_s04",
+        "name": "修改用户资料-成功修改用户名和邮箱",
+        "feature_id": "f004",
+        "priority": "high",
+        "precondition": "用户已登录，且位于 Dashboard 页面（URL: /）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "DD",
+            "value": "",
+            "description": "点击右上角用户头像按钮（显示为 DD）"
+          },
+          {
+            "action": "click",
+            "target": "Settings",
+            "value": "",
+            "description": "从下拉菜单中点击『Settings』打开设置弹窗"
+          },
+          {
+            "action": "click",
+            "target": "input[name='displayName']",
+            "value": "",
+            "description": "点击显示名称输入框"
+          },
+          {
+            "action": "input",
+            "target": "input[name='displayName']",
+            "value": "NewUserName",
+            "description": "输入新的显示名称"
+          },
+          {
+            "action": "click",
+            "target": "input[name='email']",
+            "value": "",
+            "description": "点击邮箱输入框"
+          },
+          {
+            "action": "input",
+            "target": "input[name='email']",
+            "value": "newemail@example.com",
+            "description": "输入新的邮箱地址"
+          },
+          {
+            "action": "click",
+            "target": "Save",
+            "value": "",
+            "description": "点击保存按钮提交修改"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "text=NewUserName",
+            "value": "",
+            "description": "页面某处显示新的用户名（如弹窗或顶部）"
+          },
+          {
+            "condition": "visible",
+            "target": "input[name='email']",
+            "value": "newemail@example.com",
+            "description": "邮箱输入框的值已更新为新邮箱"
+          }
+        ],
+        "tags": [
+          "settings",
+          "profile",
+          "happy-path"
+        ]
+      },
+      {
+        "id": "f004_s05",
+        "name": "修改用户资料-添加电话号码和组织名称",
+        "feature_id": "f004",
+        "priority": "medium",
+        "precondition": "用户已登录，且位于 Dashboard 页面（URL: /）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "DD",
+            "value": "",
+            "description": "点击右上角用户头像按钮（显示为 DD）"
+          },
+          {
+            "action": "click",
+            "target": "Settings",
+            "value": "",
+            "description": "从下拉菜单中点击『Settings』打开设置弹窗"
+          },
+          {
+            "action": "click",
+            "target": "input[name='phone']",
+            "value": "",
+            "description": "点击电话号码输入框"
+          },
+          {
+            "action": "input",
+            "target": "input[name='phone']",
+            "value": "+1234567890",
+            "description": "输入电话号码"
+          },
+          {
+            "action": "click",
+            "target": "input[name='organization']",
+            "value": "",
+            "description": "点击组织名称输入框"
+          },
+          {
+            "action": "input",
+            "target": "input[name='organization']",
+            "value": "TestOrg",
+            "description": "输入组织名称"
+          },
+          {
+            "action": "click",
+            "target": "Save",
+            "value": "",
+            "description": "点击保存按钮提交修改"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "input[name='phone']",
+            "value": "+1234567890",
+            "description": "电话号码输入框的值已更新"
+          },
+          {
+            "condition": "visible",
+            "target": "input[name='organization']",
+            "value": "TestOrg",
+            "description": "组织名称输入框的值已更新"
+          }
+        ],
+        "tags": [
+          "settings",
+          "profile",
+          "happy-path"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f005",
+    "name": "创建项目",
+    "description": "用户创建新的项目容器",
+    "category": "项目管理",
+    "scenarios": [
+      {
+        "id": "f005_s01",
+        "name": "成功创建项目",
+        "feature_id": "f005",
+        "priority": "high",
+        "precondition": "用户已登录，位于 Dashboard 页面（URL: /）",
         "steps": [
           {
             "action": "click",
@@ -486,322 +712,519 @@
           },
           {
             "action": "input",
-            "target": "input[name='name']",
-            "value": "Dashboard Project",
-            "description": "输入项目名称"
+            "target": "input",
+            "value": "Test Project",
+            "description": "在项目名称输入框中输入项目名称"
           },
           {
             "action": "click",
-            "target": "Create",
+            "target": "button[type='submit']",
             "value": "",
-            "description": "点击创建按钮确认"
+            "description": "点击提交按钮创建项目"
           }
         ],
         "expectations": [
           {
-            "condition": "visible",
-            "target": "[data-testid='project-card']",
-            "value": "",
-            "description": "项目卡片应可见"
-          },
-          {
-            "condition": "text_contains",
-            "target": "Dashboard Project",
-            "value": "",
-            "description": "项目卡片应显示正确的项目名称"
-          }
-        ],
-        "tags": [
-          "project",
-          "creation",
-          "dashboard"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f005",
-    "name": "邀请成员",
-    "description": "向项目添加新成员并分配角色",
-    "category": "项目管理",
-    "scenarios": [
-      {
-        "id": "f005_s01",
-        "name": "成功邀请新成员并分配角色",
-        "feature_id": "f005",
-        "priority": "high",
-        "precondition": "用户已登录并进入项目设置页面",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Members",
-            "value": "",
-            "description": "点击项目设置中的“Members”选项卡"
-          },
-          {
-            "action": "click",
-            "target": "Add member",
-            "value": "",
-            "description": "点击“Add member”按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[name='emailOrUsername']",
-            "value": "newmember@example.com",
-            "description": "输入新成员的邮箱地址"
-          },
-          {
-            "action": "select",
-            "target": "select[name='role']",
-            "value": "Editor",
-            "description": "选择角色为Editor"
-          },
-          {
-            "action": "click",
-            "target": "Add member",
-            "value": "",
-            "description": "点击“Add member”按钮完成邀请"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "text_contains",
-            "target": "newmember@example.com",
-            "value": "newmember@example.com",
-            "description": "验证新成员已成功添加到成员列表"
+            "condition": "url_contains",
+            "target": "/projects/",
+            "value": "/projects/",
+            "description": "URL 应跳转到新项目的详情页"
           },
           {
             "condition": "visible",
-            "target": "Editor",
+            "target": "Test Project",
             "value": "",
-            "description": "验证新成员的角色显示为Editor"
+            "description": "页面应显示新创建的项目名称"
           }
         ],
         "tags": [
-          "happy path",
-          "member management"
+          "smoke",
+          "project_management"
         ]
       },
       {
         "id": "f005_s02",
-        "name": "邀请成员时输入无效邮箱",
+        "name": "创建项目时取消操作",
         "feature_id": "f005",
         "priority": "medium",
-        "precondition": "用户已登录并进入项目设置页面的成员管理界面",
+        "precondition": "用户已登录，位于 Dashboard 页面（URL: /）",
         "steps": [
           {
             "action": "click",
-            "target": "Add member",
+            "target": "Add Project",
             "value": "",
-            "description": "点击“Add member”按钮"
+            "description": "点击仪表板上的『Add Project』按钮"
           },
           {
-            "action": "input",
-            "target": "input[name='emailOrUsername']",
-            "value": "invalid-email",
-            "description": "输入无效的邮箱地址"
-          },
-          {
-            "action": "click",
-            "target": "Add member",
-            "value": "",
-            "description": "尝试点击“Add member”按钮"
+            "action": "press",
+            "target": "Escape",
+            "value": "Escape",
+            "description": "按 Escape 取消创建项目"
           }
         ],
         "expectations": [
           {
-            "condition": "visible",
-            "target": "Please enter a valid email address",
-            "value": "",
-            "description": "验证显示邮箱格式错误提示"
+            "condition": "url_contains",
+            "target": "/",
+            "value": "/",
+            "description": "取消后仍停留在 Dashboard"
           },
           {
-            "condition": "not_visible",
-            "target": "invalid-email",
+            "condition": "visible",
+            "target": "Add Project",
             "value": "",
-            "description": "验证无效成员未添加到列表中"
+            "description": "Dashboard 上仍显示 Add Project"
           }
         ],
         "tags": [
-          "error handling",
-          "validation"
-        ]
-      },
-      {
-        "id": "f005_s03",
-        "name": "邀请已存在的成员",
-        "feature_id": "f005",
-        "priority": "medium",
-        "precondition": "用户已登录并进入项目设置页面的成员管理界面",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Add member",
-            "value": "",
-            "description": "点击“Add member”按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[name='emailOrUsername']",
-            "value": "",
-            "description": "输入已存在的成员邮箱"
-          },
-          {
-            "action": "click",
-            "target": "Add member",
-            "value": "",
-            "description": "尝试点击“Add member”按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "This user is already a member of this project",
-            "value": "",
-            "description": "验证显示成员已存在提示"
-          }
-        ],
-        "tags": [
-          "error handling",
-          "duplicate check"
+          "regression",
+          "project_management"
         ]
       }
     ]
   },
   {
     "id": "f006",
-    "name": "创建看板",
-    "description": "在项目内新建看板并可选择模板导入",
-    "category": "看板操作",
+    "name": "修改项目设置",
+    "description": "用户编辑项目名称、描述等配置",
+    "category": "项目管理",
     "scenarios": [
       {
         "id": "f006_s01",
-        "name": "创建空白看板",
+        "name": "修改项目名称和描述",
         "feature_id": "f006",
         "priority": "high",
-        "precondition": "已登录并进入项目视图",
+        "precondition": "用户已登录，且存在一个项目（如 Getting started1）",
         "steps": [
           {
             "action": "click",
-            "target": "Create new board",
+            "target": "Getting started1",
             "value": "",
-            "description": "点击创建新看板按钮"
+            "description": "点击侧边栏中的项目名称进入项目详情页"
           },
           {
             "action": "click",
-            "target": "Create blank board",
+            "target": "button[type='button']:has-text('Settings')",
             "value": "",
-            "description": "选择创建空白看板"
+            "description": "点击项目设置按钮打开设置弹窗"
+          },
+          {
+            "action": "click",
+            "target": "input[name='name']",
+            "value": "",
+            "description": "点击项目名称输入框"
           },
           {
             "action": "input",
-            "target": "input[name='boardName']",
-            "value": "Test Board",
-            "description": "输入看板名称"
+            "target": "input[name='name']",
+            "value": "Updated Project Name",
+            "description": "输入新的项目名称"
           },
           {
             "action": "click",
-            "target": "Create",
+            "target": "textarea[name='description']",
             "value": "",
-            "description": "点击创建按钮"
+            "description": "点击项目描述输入框"
+          },
+          {
+            "action": "input",
+            "target": "textarea[name='description']",
+            "value": "This is an updated description for the project.",
+            "description": "输入新的项目描述"
+          },
+          {
+            "action": "click",
+            "target": "button[type='submit']:has-text('Save')",
+            "value": "",
+            "description": "点击保存按钮提交修改"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "text='Test Board'",
+            "target": "text=Updated Project Name",
             "value": "",
-            "description": "验证看板名称显示在页面上"
+            "description": "项目名称已更新为新的名称"
           },
           {
-            "condition": "url_contains",
-            "target": "",
-            "value": "/board/",
-            "description": "验证URL包含看板路径"
+            "condition": "visible",
+            "target": "text=This is an updated description for the project.",
+            "value": "",
+            "description": "项目描述已更新为新的描述"
           }
         ],
         "tags": [
-          "happy_path"
+          "项目管理",
+          "项目设置",
+          "修改名称"
         ]
       },
       {
         "id": "f006_s02",
-        "name": "使用模板创建看板",
+        "name": "取消修改项目设置",
         "feature_id": "f006",
         "priority": "medium",
-        "precondition": "已登录并进入项目视图",
+        "precondition": "用户已登录，且存在一个项目（如 Getting started1）",
         "steps": [
           {
             "action": "click",
-            "target": "Create new board",
+            "target": "Getting started1",
             "value": "",
-            "description": "点击创建新看板按钮"
+            "description": "点击侧边栏中的项目名称进入项目详情页"
           },
           {
             "action": "click",
-            "target": "Choose a template",
+            "target": "button[type='button']:has-text('Settings')",
             "value": "",
-            "description": "选择使用模板创建"
+            "description": "点击项目设置按钮打开设置弹窗"
           },
           {
             "action": "click",
-            "target": "Software Development",
+            "target": "input[name='name']",
             "value": "",
-            "description": "选择软件开发模板"
+            "description": "点击项目名称输入框"
           },
           {
             "action": "input",
-            "target": "input[name='boardName']",
-            "value": "Dev Board",
-            "description": "输入看板名称"
+            "target": "input[name='name']",
+            "value": "Temporary Name",
+            "description": "输入一个临时项目名称"
           },
           {
             "action": "click",
-            "target": "Create",
+            "target": "button[type='button']:has-text('Cancel')",
             "value": "",
-            "description": "点击创建按钮"
+            "description": "点击取消按钮关闭设置弹窗"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "not_visible",
+            "target": "text=Temporary Name",
+            "value": "",
+            "description": "项目名称未改变，临时名称不可见"
+          },
+          {
+            "condition": "visible",
+            "target": "Getting started1",
+            "value": "",
+            "description": "项目名称仍为原始名称"
+          }
+        ],
+        "tags": [
+          "项目管理",
+          "项目设置",
+          "取消操作"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f007",
+    "name": "删除项目",
+    "description": "用户删除整个项目及其内容",
+    "category": "项目管理",
+    "scenarios": [
+      {
+        "id": "f007_s01",
+        "name": "成功删除项目",
+        "feature_id": "f007",
+        "priority": "high",
+        "precondition": "已登录演示账号，且存在一个可删除的项目（如 'Getting started1'）",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "导航到仪表板页面"
+          },
+          {
+            "action": "click",
+            "target": "Getting started1",
+            "value": "",
+            "description": "点击侧边栏中的项目名称，进入项目详情页"
+          },
+          {
+            "action": "wait",
+            "target": "button[type='button']:has-text('Settings')",
+            "value": "10000",
+            "description": "等待项目设置按钮出现"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Settings')",
+            "value": "",
+            "description": "点击项目设置按钮"
+          },
+          {
+            "action": "wait",
+            "target": "button[type='button']:has-text('Delete project')",
+            "value": "5000",
+            "description": "等待删除项目按钮出现"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Delete project')",
+            "value": "",
+            "description": "点击删除项目按钮"
+          },
+          {
+            "action": "wait",
+            "target": "button[type='button']:has-text('Delete')",
+            "value": "5000",
+            "description": "等待确认删除弹窗出现"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Delete')",
+            "value": "",
+            "description": "在确认弹窗中点击删除按钮"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "url_contains",
+            "target": "https://demo.4gaboards.com/",
+            "value": "/",
+            "description": "页面跳转回仪表板首页"
+          },
+          {
+            "condition": "not_visible",
+            "target": "Getting started1",
+            "value": "",
+            "description": "侧边栏中不再显示被删除的项目"
+          }
+        ],
+        "tags": [
+          "项目管理",
+          "删除项目",
+          "happy path"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f008",
+    "name": "邀请成员",
+    "description": "用户向项目或看板添加成员",
+    "category": "项目管理",
+    "scenarios": [
+      {
+        "id": "f008_s01",
+        "name": "从看板页面邀请成员到看板",
+        "feature_id": "f008",
+        "priority": "high",
+        "precondition": "用户已登录，且存在一个看板（如 Kanban Test Board）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "Kanban Test Board",
+            "value": "",
+            "description": "点击侧边栏中的看板名称进入看板页面"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "等待看板页面加载完成"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Members')",
+            "value": "",
+            "description": "点击看板顶部的成员按钮"
+          },
+          {
+            "action": "wait",
+            "target": "input[placeholder='Enter email or username']",
+            "value": "",
+            "description": "等待邀请成员弹窗出现"
+          },
+          {
+            "action": "input",
+            "target": "input[placeholder='Enter email or username']",
+            "value": "demo@demo.demo",
+            "description": "输入要邀请的成员邮箱或用户名"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Invite')",
+            "value": "",
+            "description": "点击邀请按钮"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "text='Dev Board'",
+            "target": "text=Member added",
             "value": "",
-            "description": "验证看板名称显示在页面上"
-          },
-          {
-            "condition": "count_greater_than",
-            "target": "div.column",
-            "value": "0",
-            "description": "验证看板包含多个列（模板导入成功）"
+            "description": "页面显示成员添加成功的提示"
           }
         ],
         "tags": [
-          "template"
+          "f008",
+          "invite-member",
+          "happy-path"
         ]
       },
       {
-        "id": "f006_s03",
-        "name": "取消创建看板",
-        "feature_id": "f006",
-        "priority": "low",
-        "precondition": "已登录并进入项目视图",
+        "id": "f008_s02",
+        "name": "从项目设置弹窗邀请成员到项目",
+        "feature_id": "f008",
+        "priority": "medium",
+        "precondition": "用户已登录，且存在一个项目（如 Getting started1）",
         "steps": [
           {
             "action": "click",
-            "target": "Create new board",
+            "target": "Getting started1",
             "value": "",
-            "description": "点击创建新看板按钮"
+            "description": "点击侧边栏中的项目名称进入项目页面"
+          },
+          {
+            "action": "wait",
+            "target": "button[type='button']:has-text('Settings')",
+            "value": "",
+            "description": "等待项目页面加载完成"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Settings')",
+            "value": "",
+            "description": "点击项目设置按钮"
+          },
+          {
+            "action": "wait",
+            "target": "text=Members",
+            "value": "",
+            "description": "等待设置弹窗出现"
+          },
+          {
+            "action": "click",
+            "target": "text=Members",
+            "value": "",
+            "description": "点击设置弹窗中的成员标签"
+          },
+          {
+            "action": "wait",
+            "target": "input[placeholder='Enter email or username']",
+            "value": "",
+            "description": "等待成员输入框出现"
           },
           {
             "action": "input",
-            "target": "input[name='boardName']",
+            "target": "input[placeholder='Enter email or username']",
+            "value": "testuser@example.com",
+            "description": "输入要邀请的成员邮箱"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Invite')",
+            "value": "",
+            "description": "点击邀请按钮"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "text=Member added",
+            "value": "",
+            "description": "页面显示成员添加成功的提示"
+          }
+        ],
+        "tags": [
+          "f008",
+          "invite-member",
+          "project-settings"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f009",
+    "name": "创建看板",
+    "description": "用户在项目中创建新的看板",
+    "category": "看板操作",
+    "scenarios": [
+      {
+        "id": "f009_s01",
+        "name": "在项目中成功创建看板",
+        "feature_id": "f009",
+        "priority": "high",
+        "precondition": "用户已登录，且已进入一个项目（如 Getting started）的看板页面",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "导航到已知的看板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('+')",
+            "value": "",
+            "description": "点击看板页面中的『+』按钮以添加新看板"
+          },
+          {
+            "action": "input",
+            "target": "input[placeholder='Enter board name']",
+            "value": "My New Board",
+            "description": "输入新看板名称"
+          },
+          {
+            "action": "press",
+            "target": "Enter",
+            "value": "",
+            "description": "按回车确认创建"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "text=My New Board",
+            "value": "",
+            "description": "新创建的看板名称出现在侧边栏或页面中"
+          },
+          {
+            "condition": "url_contains",
+            "target": "/boards/",
+            "value": "/boards/",
+            "description": "URL 包含看板路径"
+          }
+        ],
+        "tags": [
+          "看板操作",
+          "创建看板",
+          "happy path"
+        ]
+      },
+      {
+        "id": "f009_s02",
+        "name": "创建看板时取消操作",
+        "feature_id": "f009",
+        "priority": "medium",
+        "precondition": "用户已登录，且已进入一个项目的看板页面",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "导航到已知的看板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('+')",
+            "value": "",
+            "description": "点击看板页面中的『+』按钮以添加新看板"
+          },
+          {
+            "action": "input",
+            "target": "input[placeholder='Enter board name']",
             "value": "Cancelled Board",
             "description": "输入看板名称"
           },
           {
             "action": "click",
-            "target": "Cancel",
+            "target": "button[type='button']:has-text('Cancel')",
             "value": "",
             "description": "点击取消按钮"
           }
@@ -809,85 +1232,268 @@
         "expectations": [
           {
             "condition": "not_visible",
-            "target": "text='Cancelled Board'",
+            "target": "text=Cancelled Board",
             "value": "",
-            "description": "验证看板未创建成功"
+            "description": "取消后看板名称不应出现在侧边栏"
           },
           {
             "condition": "url_contains",
-            "target": "",
-            "value": "/project/",
-            "description": "验证URL仍保持在项目页面"
+            "target": "/boards/",
+            "value": "/boards/",
+            "description": "仍停留在看板页面"
           }
         ],
         "tags": [
-          "cancel"
+          "看板操作",
+          "创建看板",
+          "取消"
         ]
       }
     ]
   },
   {
-    "id": "f007",
-    "name": "导入看板",
-    "description": "从Trello或4ga Boards导出文件(.json/.tgz)创建看板",
+    "id": "f010",
+    "name": "切换看板视图",
+    "description": "用户在不同看板之间切换浏览",
     "category": "看板操作",
     "scenarios": [
       {
-        "id": "f007_s01",
-        "name": "从Trello导入看板",
-        "feature_id": "f007",
+        "id": "f010_s01",
+        "name": "从仪表板侧边栏切换到指定看板",
+        "feature_id": "f010",
         "priority": "high",
-        "precondition": "用户已登录系统",
+        "precondition": "用户已登录，位于仪表板页面（URL: /）",
         "steps": [
           {
             "action": "click",
-            "target": "+Add Board",
+            "target": "Kanban Test Board",
             "value": "",
-            "description": "点击侧边栏的『+Add Board』按钮"
+            "description": "点击侧边栏中的看板名称『Kanban Test Board』"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "url_contains",
+            "target": "",
+            "value": "/boards/",
+            "description": "页面 URL 应包含 /boards/，表示已切换到看板视图"
+          },
+          {
+            "condition": "visible",
+            "target": "Kanban Test Board",
+            "value": "",
+            "description": "目标看板名称可见，表示已进入看板页面"
+          }
+        ],
+        "tags": [
+          "看板切换",
+          "happy path"
+        ]
+      },
+      {
+        "id": "f010_s02",
+        "name": "从看板页面通过侧边栏切换到另一个看板",
+        "feature_id": "f010",
+        "priority": "high",
+        "precondition": "用户已登录，位于看板页面（如 /boards/1782552018351555584）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "Getting started1",
+            "value": "",
+            "description": "点击侧边栏中的看板名称『Getting started1』"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "url_contains",
+            "target": "",
+            "value": "/boards/",
+            "description": "页面 URL 应包含 /boards/，表示已切换到另一个看板"
+          },
+          {
+            "condition": "visible",
+            "target": "Kanban Test Board",
+            "value": "",
+            "description": "目标看板名称可见，表示已进入看板页面"
+          }
+        ],
+        "tags": [
+          "看板切换",
+          "happy path"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f011",
+    "name": "删除看板",
+    "description": "用户删除整个看板",
+    "category": "看板操作",
+    "scenarios": [
+      {
+        "id": "f011_s01",
+        "name": "从看板页面删除看板",
+        "feature_id": "f011",
+        "priority": "high",
+        "precondition": "用户已登录，且存在一个可删除的看板（如 'Kanban Test Board'）",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "访问仪表板页面"
+          },
+          {
+            "action": "click",
+            "target": "Kanban Test Board",
+            "value": "",
+            "description": "点击侧边栏中的看板名称，进入看板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Board Menu')",
+            "value": "",
+            "description": "点击看板菜单按钮（通常位于看板右上角，文本可能为 'Board Menu' 或类似，若不存在则尝试点击设置图标）"
+          },
+          {
+            "action": "click",
+            "target": "text=Settings",
+            "value": "",
+            "description": "在菜单中点击『Settings』进入看板设置"
+          },
+          {
+            "action": "click",
+            "target": "text=Delete Board",
+            "value": "",
+            "description": "点击『Delete Board』按钮"
+          },
+          {
+            "action": "wait",
+            "target": "text=Are you sure you want to delete this board?",
+            "value": "",
+            "description": "等待确认删除弹窗出现"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Delete')",
+            "value": "",
+            "description": "在确认弹窗中点击『Delete』按钮"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "url_contains",
+            "target": "/",
+            "value": "/",
+            "description": "删除后页面跳转回仪表板首页"
+          },
+          {
+            "condition": "not_visible",
+            "target": "text=Kanban Test Board",
+            "value": "",
+            "description": "侧边栏中不再显示被删除的看板名称"
+          }
+        ],
+        "tags": [
+          "delete_board",
+          "happy_path"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f012",
+    "name": "导入看板",
+    "description": "用户从Trello或4ga Boards文件导入看板",
+    "category": "看板操作",
+    "scenarios": [
+      {
+        "id": "f012_s01",
+        "name": "从Trello JSON文件导入看板",
+        "feature_id": "f012",
+        "priority": "high",
+        "precondition": "用户已登录，位于项目详情页，且本地有合法的Trello JSON导出文件",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "导航到首页"
+          },
+          {
+            "action": "click",
+            "target": "Add Project",
+            "value": "",
+            "description": "点击仪表板上的『Add Project』按钮"
+          },
+          {
+            "action": "input",
+            "target": "input[name='name']",
+            "value": "Trello Import Test",
+            "description": "输入新项目名称"
+          },
+          {
+            "action": "click",
+            "target": "button[type='submit']",
+            "value": "",
+            "description": "提交创建项目表单"
+          },
+          {
+            "action": "wait",
+            "target": "text=Add Board",
+            "value": "",
+            "description": "等待项目创建完成，出现『Add Board』按钮"
+          },
+          {
+            "action": "click",
+            "target": "Add Board",
+            "value": "",
+            "description": "点击『Add Board』打开创建看板弹窗"
           },
           {
             "action": "click",
             "target": "Import",
             "value": "",
-            "description": "在弹窗中选择『Import』选项"
+            "description": "在创建看板弹窗中点击『Import』选项"
           },
           {
             "action": "click",
-            "target": "From Trello",
+            "target": "text=Trello",
             "value": "",
-            "description": "选择『From Trello』导入方式"
+            "description": "选择从Trello导入"
           },
           {
-            "action": "input",
+            "action": "setInputFiles",
             "target": "input[type='file']",
-            "value": "trello_board.json",
-            "description": "选择Trello导出的.json文件"
+            "value": "test_data/trello_export.json",
+            "description": "上传Trello JSON文件"
           },
           {
             "action": "input",
-            "target": "input[name='name']",
+            "target": "input[name='boardName']",
             "value": "Imported Trello Board",
-            "description": "输入新看板名称"
+            "description": "输入导入后的看板名称"
           },
           {
             "action": "click",
-            "target": "Create Board",
+            "target": "button[type='submit']",
             "value": "",
-            "description": "点击『Create Board』按钮完成导入"
+            "description": "提交导入表单"
           }
         ],
         "expectations": [
           {
-            "condition": "visible",
-            "target": "text='Imported Trello Board'",
-            "value": "",
-            "description": "验证新导入的看板显示在侧边栏中"
+            "condition": "url_contains",
+            "target": "/boards/",
+            "value": "/boards/",
+            "description": "导入成功后跳转到看板页面"
           },
           {
-            "condition": "count_greater_than",
-            "target": ".board-list",
-            "value": "0",
-            "description": "验证看板中包含导入的列表"
+            "condition": "visible",
+            "target": "text=Imported Trello Board",
+            "value": "",
+            "description": "看板标题显示为导入时指定的名称"
           }
         ],
         "tags": [
@@ -897,205 +1503,637 @@
         ]
       },
       {
-        "id": "f007_s02",
-        "name": "从4ga Boards导入看板",
-        "feature_id": "f007",
-        "priority": "medium",
-        "precondition": "用户已登录系统且已有导出的4ga Boards文件",
-        "steps": [
-          {
-            "action": "click",
-            "target": "+Add Board",
-            "value": "",
-            "description": "点击侧边栏的『+Add Board』按钮"
-          },
-          {
-            "action": "click",
-            "target": "Import",
-            "value": "",
-            "description": "在弹窗中选择『Import』选项"
-          },
-          {
-            "action": "click",
-            "target": "From 4ga Boards",
-            "value": "",
-            "description": "选择『From 4ga Boards』导入方式"
-          },
-          {
-            "action": "input",
-            "target": "input[type='file']",
-            "value": "4ga_board_export.tgz",
-            "description": "选择4ga Boards导出的.tgz文件"
-          },
-          {
-            "action": "input",
-            "target": "input[name='name']",
-            "value": "Imported 4ga Board",
-            "description": "输入新看板名称"
-          },
-          {
-            "action": "click",
-            "target": "Create Board",
-            "value": "",
-            "description": "点击『Create Board』按钮完成导入"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text='Imported 4ga Board'",
-            "value": "",
-            "description": "验证新导入的看板显示在侧边栏中"
-          },
-          {
-            "condition": "count_greater_than",
-            "target": ".board-list",
-            "value": "0",
-            "description": "验证看板中包含导入的列表"
-          }
-        ],
-        "tags": [
-          "import",
-          "4ga-boards",
-          "happy-path"
-        ]
-      },
-      {
-        "id": "f007_s03",
-        "name": "导入时选择项目",
-        "feature_id": "f007",
-        "priority": "low",
-        "precondition": "用户已登录系统且存在多个项目",
-        "steps": [
-          {
-            "action": "click",
-            "target": "+Add Board",
-            "value": "",
-            "description": "点击侧边栏的『+Add Board』按钮"
-          },
-          {
-            "action": "click",
-            "target": "Import",
-            "value": "",
-            "description": "在弹窗中选择『Import』选项"
-          },
-          {
-            "action": "select",
-            "target": "select[name='project']",
-            "value": "Existing Project",
-            "description": "从下拉列表选择目标项目"
-          },
-          {
-            "action": "click",
-            "target": "From Trello",
-            "value": "",
-            "description": "选择『From Trello』导入方式"
-          },
-          {
-            "action": "input",
-            "target": "input[type='file']",
-            "value": "trello_board.json",
-            "description": "选择Trello导出的.json文件"
-          },
-          {
-            "action": "input",
-            "target": "input[name='name']",
-            "value": "Project-specific Board",
-            "description": "输入新看板名称"
-          },
-          {
-            "action": "click",
-            "target": "Create Board",
-            "value": "",
-            "description": "点击『Create Board』按钮完成导入"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text='Project-specific Board'",
-            "value": "",
-            "description": "验证新导入的看板显示在指定项目中"
-          },
-          {
-            "condition": "url_contains",
-            "target": "",
-            "value": "/project/",
-            "description": "验证URL包含项目路径"
-          }
-        ],
-        "tags": [
-          "import",
-          "project",
-          "happy-path"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f008",
-    "name": "删除看板",
-    "description": "通过右键菜单永久删除看板",
-    "category": "看板操作",
-    "scenarios": [
-      {
-        "id": "f008_s01",
-        "name": "通过右键菜单删除看板",
-        "feature_id": "f008",
+        "id": "f012_s02",
+        "name": "从4ga Boards TGZ文件导入看板",
+        "feature_id": "f012",
         "priority": "high",
-        "precondition": "用户已登录并存在至少一个看板",
+        "precondition": "用户已登录，位于项目详情页，且本地有合法的4ga Boards TGZ导出文件",
         "steps": [
           {
             "action": "navigate",
-            "target": "https://demo.4gaboards.com",
+            "target": "https://demo.4gaboards.com/",
             "value": "",
-            "description": "导航到应用首页"
+            "description": "导航到首页"
           },
           {
             "action": "click",
-            "target": "input[name='emailOrUsername']",
-            "value": "demo@demo.demo",
-            "description": "输入用户名"
+            "target": "Add Project",
+            "value": "",
+            "description": "点击仪表板上的『Add Project』按钮"
           },
           {
-            "action": "click",
-            "target": "input[type='password']",
-            "value": "demo",
-            "description": "输入密码"
+            "action": "input",
+            "target": "input[name='name']",
+            "value": "4ga Import Test",
+            "description": "输入新项目名称"
           },
           {
             "action": "click",
             "target": "button[type='submit']",
             "value": "",
-            "description": "点击登录按钮"
+            "description": "提交创建项目表单"
           },
           {
             "action": "wait",
-            "target": "text=Dashboard",
+            "target": "text=Add Board",
             "value": "",
-            "description": "等待仪表板页面加载完成"
+            "description": "等待项目创建完成，出现『Add Board』按钮"
           },
           {
             "action": "click",
-            "target": "text=My Boards",
+            "target": "Add Board",
             "value": "",
-            "description": "点击看板菜单"
+            "description": "点击『Add Board』打开创建看板弹窗"
+          },
+          {
+            "action": "click",
+            "target": "Import",
+            "value": "",
+            "description": "在创建看板弹窗中点击『Import』选项"
+          },
+          {
+            "action": "setInputFiles",
+            "target": "From 4ga Boards",
+            "value": "test_data/4gaboards_export.tgz",
+            "description": "选择 From 4ga Boards 并上传 TGZ 文件"
+          },
+          {
+            "action": "input",
+            "target": "input[name='name']",
+            "value": "Imported 4ga Board",
+            "description": "输入导入后的看板名称"
+          },
+          {
+            "action": "click",
+            "target": "button[type='submit']",
+            "value": "",
+            "description": "提交导入表单"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "url_contains",
+            "target": "/boards/",
+            "value": "/boards/",
+            "description": "导入成功后跳转到看板页面"
+          },
+          {
+            "condition": "visible",
+            "target": "text=Imported 4ga Board",
+            "value": "",
+            "description": "看板标题显示为导入时指定的名称"
+          }
+        ],
+        "tags": [
+          "import",
+          "4gaboards",
+          "happy-path"
+        ]
+      },
+      {
+        "id": "f012_s03",
+        "name": "导入看板时取消操作",
+        "feature_id": "f012",
+        "priority": "medium",
+        "precondition": "用户已登录，位于项目详情页",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "导航到首页"
+          },
+          {
+            "action": "click",
+            "target": "Add Project",
+            "value": "",
+            "description": "点击仪表板上的『Add Project』按钮"
+          },
+          {
+            "action": "input",
+            "target": "input[name='name']",
+            "value": "Cancel Import Test",
+            "description": "输入新项目名称"
+          },
+          {
+            "action": "click",
+            "target": "button[type='submit']",
+            "value": "",
+            "description": "提交创建项目表单"
+          },
+          {
+            "action": "wait",
+            "target": "text=Add Board",
+            "value": "",
+            "description": "等待项目创建完成，出现『Add Board』按钮"
+          },
+          {
+            "action": "click",
+            "target": "Add Board",
+            "value": "",
+            "description": "点击『Add Board』打开创建看板弹窗"
+          },
+          {
+            "action": "click",
+            "target": "Import",
+            "value": "",
+            "description": "在创建看板弹窗中点击『Import』选项"
+          },
+          {
+            "action": "click",
+            "target": "Cancel",
+            "value": "",
+            "description": "点击『Cancel』取消导入"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "Add Board",
+            "value": "",
+            "description": "取消后回到项目详情页，『Add Board』按钮可见"
+          },
+          {
+            "condition": "not_visible",
+            "target": "Import",
+            "value": "",
+            "description": "导入弹窗已关闭"
+          }
+        ],
+        "tags": [
+          "import",
+          "cancel",
+          "negative"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f013",
+    "name": "创建列表",
+    "description": "用户在看板上创建新的列表（列）",
+    "category": "列表管理",
+    "scenarios": [
+      {
+        "id": "f013_s01",
+        "name": "在看板上成功创建新列表",
+        "feature_id": "f013",
+        "priority": "high",
+        "precondition": "用户已登录，并进入一个看板页面（如：https://demo.4gaboards.com/boards/1782552018351555584）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Add a list')",
+            "value": "",
+            "description": "点击『Add a list』按钮以添加新列表"
+          },
+          {
+            "action": "input",
+            "target": "input[placeholder='Enter list title...']",
+            "value": "Sprint Backlog",
+            "description": "在输入框中输入新列表的名称"
+          },
+          {
+            "action": "click",
+            "target": "button[type='submit']:has-text('Add list')",
+            "value": "",
+            "description": "点击『Add list』按钮确认创建列表"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "text=Sprint Backlog",
+            "value": "",
+            "description": "新创建的列表标题『Sprint Backlog』应显示在看板上"
+          }
+        ],
+        "tags": [
+          "列表管理",
+          "创建列表",
+          "happy path"
+        ]
+      },
+      {
+        "id": "f013_s02",
+        "name": "创建列表时取消操作",
+        "feature_id": "f013",
+        "priority": "medium",
+        "precondition": "用户已登录，并进入一个看板页面（如：https://demo.4gaboards.com/boards/1782552018351555584）",
+        "steps": [
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Add a list')",
+            "value": "",
+            "description": "点击『Add a list』按钮以添加新列表"
+          },
+          {
+            "action": "input",
+            "target": "input[placeholder='Enter list title...']",
+            "value": "Temporary List",
+            "description": "在输入框中输入一个临时列表名称"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Cancel')",
+            "value": "",
+            "description": "点击『Cancel』按钮取消创建列表"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "not_visible",
+            "target": "text=Temporary List",
+            "value": "",
+            "description": "取消后，临时列表不应出现在看板上"
+          }
+        ],
+        "tags": [
+          "列表管理",
+          "创建列表",
+          "取消操作"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f014",
+    "name": "重命名列表",
+    "description": "用户修改列表的名称",
+    "category": "列表管理",
+    "scenarios": [
+      {
+        "id": "f014_s01",
+        "name": "重命名列表 - 正常流程",
+        "feature_id": "f014",
+        "priority": "high",
+        "precondition": "用户已登录，打开一个包含列表的看板页面",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "导航到看板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "点击侧边栏中的看板名称，确保看板已加载"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='button']",
+            "value": "2000",
+            "description": "等待看板列表加载"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Getting started')",
+            "value": "",
+            "description": "点击列表标题（假设列表名称为Getting started），触发重命名"
+          },
+          {
+            "action": "input",
+            "target": "input[type='text']",
+            "value": "Renamed List",
+            "description": "在输入框中输入新的列表名称"
+          },
+          {
+            "action": "press",
+            "target": "input[type='text']",
+            "value": "Enter",
+            "description": "按回车键确认重命名"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "button[type='button']:has-text('Renamed List')",
+            "value": "",
+            "description": "列表名称已更新为Renamed List"
+          }
+        ],
+        "tags": [
+          "列表管理",
+          "重命名",
+          "happy path"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f015",
+    "name": "移动列表",
+    "description": "用户通过拖拽改变列表在看板上的顺序",
+    "category": "列表管理",
+    "scenarios": [
+      {
+        "id": "f015_s01",
+        "name": "通过拖拽移动列表位置",
+        "feature_id": "f015",
+        "priority": "high",
+        "precondition": "用户已登录，并打开一个包含至少两个列表的看板页面（如 https://demo.4gaboards.com/boards/1782552018351555584）",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "打开看板页面"
+          },
+          {
+            "action": "wait",
+            "target": "div[class*='BoardColumn']",
+            "value": "",
+            "description": "等待看板列加载"
           },
           {
             "action": "hover",
-            "target": "text=Test Board",
+            "target": "div[class*='BoardColumn'] >> nth=0",
             "value": "",
-            "description": "悬停在要删除的看板上"
+            "description": "鼠标悬停在第一个列表上，触发拖拽手柄"
+          },
+          {
+            "action": "wait",
+            "target": "div[class*='BoardColumn'] >> nth=0 >> [class*='dragHandle']",
+            "value": "",
+            "description": "等待拖拽手柄出现"
+          },
+          {
+            "action": "hover",
+            "target": "div[class*='BoardColumn'] >> nth=0 >> [class*='dragHandle']",
+            "value": "",
+            "description": "鼠标移动到拖拽手柄上"
+          },
+          {
+            "action": "press",
+            "target": "div[class*='BoardColumn'] >> nth=0 >> [class*='dragHandle']",
+            "value": "Space",
+            "description": "按下空格键开始拖拽"
+          },
+          {
+            "action": "press",
+            "target": "ArrowDown",
+            "value": "",
+            "description": "按向下箭头将列表移动到第二个位置"
+          },
+          {
+            "action": "press",
+            "target": "Space",
+            "value": "",
+            "description": "按空格键释放拖拽，完成移动"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "div[class*='BoardColumn'] >> nth=1",
+            "value": "",
+            "description": "验证第二个列表仍然存在"
+          },
+          {
+            "condition": "text_contains",
+            "target": "div[class*='BoardColumn'] >> nth=0",
+            "value": "",
+            "description": "验证第一个列表的标题文本发生变化（表示顺序已交换）"
+          }
+        ],
+        "tags": [
+          "列表管理",
+          "拖拽排序",
+          "看板"
+        ]
+      },
+      {
+        "id": "f015_s02",
+        "name": "使用鼠标拖拽移动列表到指定位置",
+        "feature_id": "f015",
+        "priority": "high",
+        "precondition": "用户已登录，并打开一个包含至少两个列表的看板页面",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "打开看板页面"
+          },
+          {
+            "action": "wait",
+            "target": "div[class*='BoardColumn']",
+            "value": "",
+            "description": "等待看板列加载"
+          },
+          {
+            "action": "hover",
+            "target": "div[class*='BoardColumn'] >> nth=1",
+            "value": "",
+            "description": "鼠标悬停在第二个列表上"
+          },
+          {
+            "action": "wait",
+            "target": "div[class*='BoardColumn'] >> nth=1 >> [class*='dragHandle']",
+            "value": "",
+            "description": "等待拖拽手柄出现"
+          },
+          {
+            "action": "hover",
+            "target": "div[class*='BoardColumn'] >> nth=1 >> [class*='dragHandle']",
+            "value": "",
+            "description": "鼠标移动到拖拽手柄上"
+          },
+          {
+            "action": "press",
+            "target": "div[class*='BoardColumn'] >> nth=1 >> [class*='dragHandle']",
+            "value": "Space",
+            "description": "按下空格键开始拖拽"
+          },
+          {
+            "action": "press",
+            "target": "ArrowUp",
+            "value": "",
+            "description": "按向上箭头将列表移动到第一个位置"
+          },
+          {
+            "action": "press",
+            "target": "Space",
+            "value": "",
+            "description": "按空格键释放拖拽，完成移动"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "div[class*='BoardColumn'] >> nth=0",
+            "value": "",
+            "description": "验证第一个列表仍然存在"
+          },
+          {
+            "condition": "text_contains",
+            "target": "div[class*='BoardColumn'] >> nth=0",
+            "value": "",
+            "description": "验证第一个列表的标题文本发生变化（表示顺序已交换）"
+          }
+        ],
+        "tags": [
+          "列表管理",
+          "拖拽排序",
+          "看板"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f016",
+    "name": "折叠/展开列表",
+    "description": "用户隐藏或显示列表中的卡片数量",
+    "category": "列表管理",
+    "scenarios": [
+      {
+        "id": "f016_s01",
+        "name": "折叠列表-隐藏卡片",
+        "feature_id": "f016",
+        "priority": "high",
+        "precondition": "用户已登录，并进入一个包含多个列表和卡片的看板页面（如 https://demo.4gaboards.com/boards/1782552018351555584）",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "导航到目标看板页面"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "等待页面加载，确保列表可见"
           },
           {
             "action": "click",
-            "target": "text=Delete",
+            "target": "button[type='button']:has-text('Getting started1')",
             "value": "",
-            "description": "点击右键菜单中的删除选项"
+            "description": "点击侧边栏中的列表名称按钮，确保列表区域展开"
           },
           {
             "action": "click",
-            "target": "text=Delete Board",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "再次点击同一个列表名称按钮，折叠该列表（隐藏卡片）"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "not_visible",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "列表中的卡片区域（div[role='button']）不再可见，表示卡片被隐藏"
+          }
+        ],
+        "tags": [
+          "列表管理",
+          "折叠",
+          "隐藏卡片"
+        ]
+      },
+      {
+        "id": "f016_s02",
+        "name": "展开列表-显示卡片",
+        "feature_id": "f016",
+        "priority": "high",
+        "precondition": "用户已登录，并进入一个包含多个列表和卡片的看板页面，且列表处于折叠状态（卡片隐藏）",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "导航到目标看板页面"
+          },
+          {
+            "action": "wait",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "等待页面加载，确保列表标题可见"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "点击列表名称按钮，先折叠列表（确保处于折叠状态）"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "再次点击同一个列表名称按钮，展开列表（显示卡片）"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "列表中的卡片区域（div[role='button']）重新可见，表示卡片被显示"
+          }
+        ],
+        "tags": [
+          "列表管理",
+          "展开",
+          "显示卡片"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f017",
+    "name": "删除列表",
+    "description": "用户删除列表及其包含的卡片",
+    "category": "列表管理",
+    "scenarios": [
+      {
+        "id": "f017_s01",
+        "name": "删除列表 - 正常流程",
+        "feature_id": "f017",
+        "priority": "high",
+        "precondition": "用户已登录，并打开一个包含至少一个列表的看板页面",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "导航到看板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "点击侧边栏中的看板『Getting started1』"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "等待看板加载完成"
+          },
+          {
+            "action": "hover",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "悬停在列表标题上以显示操作按钮"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "点击列表标题（触发下拉菜单）"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Delete')",
+            "value": "",
+            "description": "点击删除按钮"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Delete')",
             "value": "",
             "description": "在确认弹窗中点击删除按钮"
           }
@@ -1103,399 +2141,69 @@
         "expectations": [
           {
             "condition": "not_visible",
-            "target": "text=Test Board",
+            "target": "button[type='button']:has-text('Getting started1')",
             "value": "",
-            "description": "验证看板已被删除"
+            "description": "列表『Getting started1』不再显示"
           },
           {
-            "condition": "text_contains",
-            "target": "text=Board deleted successfully",
-            "value": "",
-            "description": "验证删除成功提示出现"
+            "condition": "url_contains",
+            "target": "/boards/",
+            "value": "/boards/",
+            "description": "仍然在看板页面"
           }
         ],
         "tags": [
-          "delete",
-          "board",
-          "right-click"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f009",
-    "name": "创建列表",
-    "description": "在看板上添加新的工作流列",
-    "category": "列表管理",
-    "scenarios": [
-      {
-        "id": "f009_s01",
-        "name": "成功创建新列表",
-        "feature_id": "f009",
-        "priority": "high",
-        "precondition": "已登录并进入看板视图",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Add List",
-            "value": "",
-            "description": "点击添加列表按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter list title']",
-            "value": "New Test List",
-            "description": "输入列表标题"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text='New Test List'",
-            "value": "",
-            "description": "验证新列表已创建并显示"
-          }
-        ],
-        "tags": [
+          "列表管理",
+          "删除",
           "happy path"
         ]
-      },
-      {
-        "id": "f009_s02",
-        "name": "创建列表时取消操作",
-        "feature_id": "f009",
-        "priority": "medium",
-        "precondition": "已登录并进入看板视图",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Add List",
-            "value": "",
-            "description": "点击添加列表按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter list title']",
-            "value": "Cancelled List",
-            "description": "输入列表标题"
-          },
-          {
-            "action": "click",
-            "target": "Cancel",
-            "value": "",
-            "description": "点击取消按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "not_visible",
-            "target": "text='Cancelled List'",
-            "value": "",
-            "description": "验证列表未创建"
-          }
-        ],
-        "tags": [
-          "cancel"
-        ]
-      },
-      {
-        "id": "f009_s03",
-        "name": "创建空标题列表",
-        "feature_id": "f009",
-        "priority": "low",
-        "precondition": "已登录并进入看板视图",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Add List",
-            "value": "",
-            "description": "点击添加列表按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter list title']",
-            "value": "",
-            "description": "不输入标题"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text='List must have a title'",
-            "value": "",
-            "description": "验证显示错误提示"
-          }
-        ],
-        "tags": [
-          "validation"
-        ]
       }
     ]
   },
   {
-    "id": "f010",
-    "name": "重命名列表",
-    "description": "通过右键菜单修改列表名称",
-    "category": "列表管理",
-    "scenarios": [
-      {
-        "id": "f010_s01",
-        "name": "成功重命名列表",
-        "feature_id": "f010",
-        "priority": "high",
-        "precondition": "用户已登录并存在至少一个列表",
-        "steps": [
-          {
-            "action": "hover",
-            "target": "text=To Do",
-            "value": "",
-            "description": "鼠标悬停在列表标题上"
-          },
-          {
-            "action": "click",
-            "target": "text=To Do",
-            "value": "",
-            "description": "点击列表标题显示右键菜单"
-          },
-          {
-            "action": "click",
-            "target": "text=Rename",
-            "value": "",
-            "description": "点击重命名选项"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter list name']",
-            "value": "New List Name",
-            "description": "输入新的列表名称"
-          },
-          {
-            "action": "click",
-            "target": "text=Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "text_contains",
-            "target": "text=New List Name",
-            "value": "New List Name",
-            "description": "验证列表名称已更新为新名称"
-          }
-        ],
-        "tags": [
-          "happy path"
-        ]
-      },
-      {
-        "id": "f010_s02",
-        "name": "取消重命名列表",
-        "feature_id": "f010",
-        "priority": "medium",
-        "precondition": "用户已登录并存在至少一个列表",
-        "steps": [
-          {
-            "action": "hover",
-            "target": "text=To Do",
-            "value": "",
-            "description": "鼠标悬停在列表标题上"
-          },
-          {
-            "action": "click",
-            "target": "text=To Do",
-            "value": "",
-            "description": "点击列表标题显示右键菜单"
-          },
-          {
-            "action": "click",
-            "target": "text=Rename",
-            "value": "",
-            "description": "点击重命名选项"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter list name']",
-            "value": "Cancelled List",
-            "description": "输入新的列表名称"
-          },
-          {
-            "action": "click",
-            "target": "text=Cancel",
-            "value": "",
-            "description": "点击取消按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "text_contains",
-            "target": "text=To Do",
-            "value": "To Do",
-            "description": "验证列表名称保持不变"
-          }
-        ],
-        "tags": [
-          "cancel"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f011",
-    "name": "折叠列表",
-    "description": "隐藏列表内容并显示卡片数量",
-    "category": "列表管理",
-    "scenarios": [
-      {
-        "id": "f011_s01",
-        "name": "折叠列表功能验证",
-        "feature_id": "f011",
-        "priority": "high",
-        "precondition": "用户已登录并进入看板视图",
-        "steps": [
-          {
-            "action": "navigate",
-            "target": "https://demo.4gaboards.com",
-            "value": "",
-            "description": "导航到应用首页"
-          },
-          {
-            "action": "input",
-            "target": "input[name='emailOrUsername']",
-            "value": "demo@demo.demo",
-            "description": "输入用户名"
-          },
-          {
-            "action": "input",
-            "target": "input[type='password']",
-            "value": "demo",
-            "description": "输入密码"
-          },
-          {
-            "action": "click",
-            "target": "button[type='submit']",
-            "value": "",
-            "description": "点击登录按钮"
-          },
-          {
-            "action": "click",
-            "target": "Board view",
-            "value": "",
-            "description": "进入看板视图"
-          },
-          {
-            "action": "click",
-            "target": "List header",
-            "value": "",
-            "description": "点击列表头部"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "not_visible",
-            "target": "List items",
-            "value": "",
-            "description": "列表内容应被隐藏"
-          },
-          {
-            "condition": "visible",
-            "target": "Card count",
-            "value": "",
-            "description": "应显示卡片数量"
-          }
-        ],
-        "tags": [
-          "list",
-          "collapse",
-          "ui"
-        ]
-      },
-      {
-        "id": "f011_s02",
-        "name": "展开列表功能验证",
-        "feature_id": "f011",
-        "priority": "medium",
-        "precondition": "列表处于折叠状态",
-        "steps": [
-          {
-            "action": "click",
-            "target": "List header",
-            "value": "",
-            "description": "再次点击列表头部"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "List items",
-            "value": "",
-            "description": "列表内容应重新显示"
-          },
-          {
-            "condition": "not_visible",
-            "target": "Card count",
-            "value": "",
-            "description": "卡片数量应隐藏"
-          }
-        ],
-        "tags": [
-          "list",
-          "expand",
-          "ui"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f012",
+    "id": "f018",
     "name": "创建卡片",
-    "description": "在列表中添加新任务卡片",
+    "description": "用户在列表中创建新的卡片",
     "category": "卡片管理",
     "scenarios": [
       {
-        "id": "f012_s01",
-        "name": "在列表中创建新卡片",
-        "feature_id": "f012",
+        "id": "f018_s01",
+        "name": "在看板列表中成功创建卡片",
+        "feature_id": "f018",
         "priority": "high",
-        "precondition": "用户已登录并进入一个看板视图",
+        "precondition": "用户已登录，并打开了一个看板页面（如 Kanban Test Board）",
         "steps": [
           {
-            "action": "click",
-            "target": "Add Card",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击列表中的“添加卡片”按钮"
+            "description": "导航到看板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('+')",
+            "value": "",
+            "description": "点击第一个列表中的『+』按钮以创建新卡片"
           },
           {
             "action": "input",
             "target": "input[placeholder='Enter a title for this card...']",
-            "value": "New Test Card",
+            "value": "Test Card Title",
             "description": "输入卡片标题"
           },
           {
             "action": "press",
             "target": "input[placeholder='Enter a title for this card...']",
             "value": "Enter",
-            "description": "按Enter键保存卡片"
+            "description": "按回车确认创建"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "text='New Test Card'",
+            "target": "text=Test Card Title",
             "value": "",
-            "description": "验证新卡片已创建并显示在列表中"
+            "description": "新创建的卡片标题应显示在看板列表中"
           }
         ],
         "tags": [
@@ -1505,1660 +2213,1203 @@
         ]
       },
       {
-        "id": "f012_s02",
-        "name": "创建带格式文本的卡片",
-        "feature_id": "f012",
-        "priority": "medium",
-        "precondition": "用户已登录并进入一个看板视图",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Add Card",
-            "value": "",
-            "description": "点击列表中的“添加卡片”按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter a title for this card...']",
-            "value": "Formatted Card",
-            "description": "输入卡片标题"
-          },
-          {
-            "action": "click",
-            "target": "textarea[placeholder='Add a more detailed description...']",
-            "value": "",
-            "description": "点击卡片描述区域"
-          },
-          {
-            "action": "press",
-            "target": "textarea[placeholder='Add a more detailed description...']",
-            "value": "Control+b",
-            "description": "按下Ctrl+B加粗文本"
-          },
-          {
-            "action": "input",
-            "target": "textarea[placeholder='Add a more detailed description...']",
-            "value": "Bold description",
-            "description": "输入加粗文本"
-          },
-          {
-            "action": "press",
-            "target": "textarea[placeholder='Add a more detailed description...']",
-            "value": "Enter",
-            "description": "按Enter键保存卡片"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text='Formatted Card'",
-            "value": "",
-            "description": "验证带格式文本的卡片已创建"
-          }
-        ],
-        "tags": [
-          "card",
-          "formatting",
-          "rich-text"
-        ]
-      },
-      {
-        "id": "f012_s03",
-        "name": "创建带颜色文本的卡片",
-        "feature_id": "f012",
-        "priority": "low",
-        "precondition": "用户已登录并进入一个看板视图",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Add Card",
-            "value": "",
-            "description": "点击列表中的“添加卡片”按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter a title for this card...']",
-            "value": "Colored Card",
-            "description": "输入卡片标题"
-          },
-          {
-            "action": "click",
-            "target": "textarea[placeholder='Add a more detailed description...']",
-            "value": "",
-            "description": "点击卡片描述区域"
-          },
-          {
-            "action": "input",
-            "target": "textarea[placeholder='Add a more detailed description...']",
-            "value": "<!--red-->This text is red<!--red-end-->",
-            "description": "输入带颜色标记的文本"
-          },
-          {
-            "action": "press",
-            "target": "textarea[placeholder='Add a more detailed description...']",
-            "value": "Enter",
-            "description": "按Enter键保存卡片"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text='Colored Card'",
-            "value": "",
-            "description": "验证带颜色文本的卡片已创建"
-          }
-        ],
-        "tags": [
-          "card",
-          "color",
-          "custom-formatting"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f013",
-    "name": "移动卡片",
-    "description": "通过拖拽或菜单将卡片转移到其他列表",
-    "category": "卡片管理",
-    "scenarios": [
-      {
-        "id": "f013_s01",
-        "name": "通过拖拽移动卡片到其他列表",
-        "feature_id": "f013",
-        "priority": "high",
-        "precondition": "用户已登录并进入一个包含至少两个列表的看板页面",
-        "steps": [
-          {
-            "action": "hover",
-            "target": "div[draggable='true']",
-            "value": "",
-            "description": "悬停在要移动的卡片上"
-          },
-          {
-            "action": "drag_and_drop",
-            "target": "div[draggable='true']",
-            "value": "div[role='list']",
-            "description": "将卡片拖拽到目标列表"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "count_greater_than",
-            "target": "div[draggable='true']",
-            "value": "0",
-            "description": "目标列表中卡片数量大于0"
-          }
-        ],
-        "tags": [
-          "drag_and_drop",
-          "card_management"
-        ]
-      },
-      {
-        "id": "f013_s02",
-        "name": "通过菜单移动卡片到其他列表",
-        "feature_id": "f013",
-        "priority": "high",
-        "precondition": "用户已登录并进入一个包含至少两个列表的看板页面",
-        "steps": [
-          {
-            "action": "click",
-            "target": "div[draggable='true']",
-            "value": "",
-            "description": "点击要移动的卡片"
-          },
-          {
-            "action": "click",
-            "target": "Move",
-            "value": "",
-            "description": "点击卡片菜单中的“Move”选项"
-          },
-          {
-            "action": "click",
-            "target": "div[role='list']",
-            "value": "",
-            "description": "选择目标列表"
-          },
-          {
-            "action": "click",
-            "target": "Move",
-            "value": "",
-            "description": "点击“Move”按钮确认移动"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "not_visible",
-            "target": "div[draggable='true']",
-            "value": "",
-            "description": "原始列表中卡片不再可见"
-          }
-        ],
-        "tags": [
-          "context_menu",
-          "card_management"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f014",
-    "name": "复制卡片",
-    "description": "在列表中创建当前卡片的副本",
-    "category": "卡片管理",
-    "scenarios": [
-      {
-        "id": "f014_s01",
-        "name": "在看板视图中复制卡片",
-        "feature_id": "f014",
-        "priority": "high",
-        "precondition": "用户已登录并进入一个包含卡片的项目看板",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Card",
-            "value": "",
-            "description": "点击任意一张卡片"
-          },
-          {
-            "action": "click",
-            "target": "Copy",
-            "value": "",
-            "description": "点击卡片操作菜单中的“Copy”选项"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "count_greater_than",
-            "target": "Card",
-            "value": "1",
-            "description": "验证卡片数量增加，表明复制成功"
-          },
-          {
-            "condition": "text_contains",
-            "target": "Copy of",
-            "value": "",
-            "description": "验证新复制的卡片标题包含“Copy of”前缀"
-          }
-        ],
-        "tags": [
-          "card",
-          "copy",
-          "board"
-        ]
-      },
-      {
-        "id": "f014_s02",
-        "name": "在卡片详情视图中复制卡片",
-        "feature_id": "f014",
-        "priority": "medium",
-        "precondition": "用户已打开一张卡片的详情视图",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Copy",
-            "value": "",
-            "description": "在卡片详情视图中点击“Copy”按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "Copy of",
-            "value": "",
-            "description": "验证新复制的卡片在视图中可见"
-          },
-          {
-            "condition": "text_contains",
-            "target": "Copy of",
-            "value": "",
-            "description": "验证复制的卡片标题正确显示"
-          }
-        ],
-        "tags": [
-          "card",
-          "copy",
-          "detail"
-        ]
-      },
-      {
-        "id": "f014_s03",
-        "name": "使用快捷键复制卡片",
-        "feature_id": "f014",
-        "priority": "low",
-        "precondition": "用户已打开一张卡片的详情视图",
-        "steps": [
-          {
-            "action": "press",
-            "target": "Card",
-            "value": "Control+c",
-            "description": "在卡片详情视图中按下Ctrl+C快捷键"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "Copy of",
-            "value": "",
-            "description": "验证新复制的卡片在视图中可见"
-          },
-          {
-            "condition": "text_contains",
-            "target": "Copy of",
-            "value": "",
-            "description": "验证复制的卡片标题正确显示"
-          }
-        ],
-        "tags": [
-          "card",
-          "copy",
-          "shortcut"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f015",
-    "name": "删除卡片",
-    "description": "通过右键或卡片视图永久删除卡片",
-    "category": "卡片管理",
-    "scenarios": [
-      {
-        "id": "f015_s01",
-        "name": "通过卡片视图删除卡片",
-        "feature_id": "f015",
-        "priority": "high",
-        "precondition": "用户已登录并存在至少一个卡片",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Create new project",
-            "value": "",
-            "description": "点击仪表板上的『创建新项目』按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[name='name']",
-            "value": "Test Project",
-            "description": "输入项目名称"
-          },
-          {
-            "action": "click",
-            "target": "Create",
-            "value": "",
-            "description": "点击创建按钮"
-          },
-          {
-            "action": "click",
-            "target": "Add Card",
-            "value": "",
-            "description": "点击添加卡片按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter card title']",
-            "value": "Test Card",
-            "description": "输入卡片标题"
-          },
-          {
-            "action": "press",
-            "target": "input[placeholder='Enter card title']",
-            "value": "Enter",
-            "description": "按Enter键创建卡片"
-          },
-          {
-            "action": "click",
-            "target": "Test Card",
-            "value": "",
-            "description": "点击打开卡片详情"
-          },
-          {
-            "action": "click",
-            "target": "bin",
-            "value": "",
-            "description": "点击卡片上的删除图标"
-          },
-          {
-            "action": "click",
-            "target": "Delete",
-            "value": "",
-            "description": "在确认弹窗中点击删除按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "not_visible",
-            "target": "Test Card",
-            "value": "",
-            "description": "验证卡片已被删除"
-          }
-        ],
-        "tags": [
-          "card",
-          "delete",
-          "happy path"
-        ]
-      },
-      {
-        "id": "f015_s02",
-        "name": "通过右键菜单删除卡片",
-        "feature_id": "f015",
-        "priority": "medium",
-        "precondition": "用户已登录并存在至少一个卡片",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Create new project",
-            "value": "",
-            "description": "点击仪表板上的『创建新项目』按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[name='name']",
-            "value": "Test Project 2",
-            "description": "输入项目名称"
-          },
-          {
-            "action": "click",
-            "target": "Create",
-            "value": "",
-            "description": "点击创建按钮"
-          },
-          {
-            "action": "click",
-            "target": "Add Card",
-            "value": "",
-            "description": "点击添加卡片按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter card title']",
-            "value": "Test Card 2",
-            "description": "输入卡片标题"
-          },
-          {
-            "action": "press",
-            "target": "input[placeholder='Enter card title']",
-            "value": "Enter",
-            "description": "按Enter键创建卡片"
-          },
-          {
-            "action": "click",
-            "target": "Test Card 2",
-            "value": "",
-            "description": "右键点击卡片"
-          },
-          {
-            "action": "click",
-            "target": "Delete",
-            "value": "",
-            "description": "在右键菜单中点击删除"
-          },
-          {
-            "action": "click",
-            "target": "Delete",
-            "value": "",
-            "description": "在确认弹窗中点击删除按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "not_visible",
-            "target": "Test Card 2",
-            "value": "",
-            "description": "验证卡片已被删除"
-          }
-        ],
-        "tags": [
-          "card",
-          "delete",
-          "right-click"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f016",
-    "name": "设置卡片成员",
-    "description": "为卡片分配负责的团队成员",
-    "category": "卡片管理",
-    "scenarios": [
-      {
-        "id": "f016_s01",
-        "name": "为卡片添加成员",
-        "feature_id": "f016",
-        "priority": "high",
-        "precondition": "用户已登录并进入看板视图，存在一个打开的卡片",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Members",
-            "value": "",
-            "description": "点击卡片中的成员标签"
-          },
-          {
-            "action": "click",
-            "target": "Add Member",
-            "value": "",
-            "description": "点击添加成员按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Search members...']",
-            "value": "demo",
-            "description": "在搜索框中输入成员名称"
-          },
-          {
-            "action": "click",
-            "target": "demo@demo.demo",
-            "value": "",
-            "description": "点击搜索结果中的成员"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text='demo@demo.demo'",
-            "value": "",
-            "description": "验证成员已成功添加到卡片中"
-          }
-        ],
-        "tags": [
-          "smoke",
-          "regression"
-        ]
-      },
-      {
-        "id": "f016_s02",
-        "name": "从卡片移除成员",
-        "feature_id": "f016",
-        "priority": "medium",
-        "precondition": "用户已登录并进入看板视图，卡片中已存在成员",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Members",
-            "value": "",
-            "description": "点击卡片中的成员标签"
-          },
-          {
-            "action": "hover",
-            "target": "demo@demo.demo",
-            "value": "",
-            "description": "悬停在成员名称上"
-          },
-          {
-            "action": "click",
-            "target": "Remove",
-            "value": "",
-            "description": "点击移除按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "not_visible",
-            "target": "text='demo@demo.demo'",
-            "value": "",
-            "description": "验证成员已从卡片中移除"
-          }
-        ],
-        "tags": [
-          "regression"
-        ]
-      },
-      {
-        "id": "f016_s03",
-        "name": "验证成员搜索功能",
-        "feature_id": "f016",
-        "priority": "low",
-        "precondition": "用户已登录并进入看板视图，卡片已打开",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Members",
-            "value": "",
-            "description": "点击卡片中的成员标签"
-          },
-          {
-            "action": "click",
-            "target": "Add Member",
-            "value": "",
-            "description": "点击添加成员按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Search members...']",
-            "value": "nonexistent",
-            "description": "输入不存在的成员名称"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "count_greater_than",
-            "target": "text='No members found'",
-            "value": "0",
-            "description": "验证搜索无结果时显示提示信息"
-          }
-        ],
-        "tags": [
-          "edge case"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f017",
-    "name": "设置标签",
-    "description": "为卡片添加或移除分类标签",
-    "category": "卡片管理",
-    "scenarios": [
-      {
-        "id": "f017_s01",
-        "name": "为卡片添加新标签",
-        "feature_id": "f017",
-        "priority": "high",
-        "precondition": "用户已登录并打开一个卡片",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Labels",
-            "value": "",
-            "description": "点击卡片上的标签区域"
-          },
-          {
-            "action": "click",
-            "target": "Create new label",
-            "value": "",
-            "description": "点击创建新标签按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Label name']",
-            "value": "Bug",
-            "description": "输入标签名称"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          },
-          {
-            "action": "click",
-            "target": "Bug",
-            "value": "",
-            "description": "点击新创建的标签添加到卡片"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text=Bug",
-            "value": "",
-            "description": "标签已成功添加到卡片"
-          }
-        ],
-        "tags": [
-          "标签管理",
-          "卡片操作"
-        ]
-      },
-      {
-        "id": "f017_s02",
-        "name": "从卡片移除标签",
-        "feature_id": "f017",
-        "priority": "medium",
-        "precondition": "卡片已添加至少一个标签",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Labels",
-            "value": "",
-            "description": "点击卡片上的标签区域"
-          },
-          {
-            "action": "click",
-            "target": "Bug",
-            "value": "",
-            "description": "点击已添加的标签"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "not_visible",
-            "target": "text=Bug",
-            "value": "",
-            "description": "标签已从卡片中移除"
-          }
-        ],
-        "tags": [
-          "标签管理",
-          "卡片操作"
-        ]
-      },
-      {
-        "id": "f017_s03",
-        "name": "编辑现有标签",
-        "feature_id": "f017",
-        "priority": "low",
-        "precondition": "卡片已添加至少一个标签",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Labels",
-            "value": "",
-            "description": "点击卡片上的标签区域"
-          },
-          {
-            "action": "click",
-            "target": "pencil",
-            "value": "",
-            "description": "点击标签编辑图标"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Label name']",
-            "value": "Critical Bug",
-            "description": "修改标签名称"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "text_contains",
-            "target": "text=Critical Bug",
-            "value": "",
-            "description": "标签名称已更新"
-          }
-        ],
-        "tags": [
-          "标签管理",
-          "卡片操作"
-        ]
-      }
-    ]
-  },
-  {
-    "id": "f018",
-    "name": "设置截止日期",
-    "description": "为卡片添加或修改任务截止时间",
-    "category": "卡片管理",
-    "scenarios": [
-      {
-        "id": "f018_s01",
-        "name": "为卡片添加截止日期",
-        "feature_id": "f018",
-        "priority": "high",
-        "precondition": "用户已登录并打开一个卡片",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Due date",
-            "value": "",
-            "description": "点击卡片上的截止日期区域"
-          },
-          {
-            "action": "click",
-            "target": "+",
-            "value": "",
-            "description": "点击添加截止日期的加号按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Add due date']",
-            "value": "2024-12-31",
-            "description": "输入截止日期"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text=2024-12-31",
-            "value": "",
-            "description": "截止日期应显示在卡片上"
-          },
-          {
-            "condition": "text_contains",
-            "target": "Due date",
-            "value": "2024-12-31",
-            "description": "截止日期文本应包含输入的日期"
-          }
-        ],
-        "tags": [
-          "card",
-          "due-date"
-        ]
-      },
-      {
         "id": "f018_s02",
-        "name": "修改已存在的截止日期",
+        "name": "创建卡片时取消操作",
         "feature_id": "f018",
         "priority": "medium",
-        "precondition": "卡片已设置截止日期",
+        "precondition": "用户已登录，并打开了一个看板页面",
         "steps": [
           {
-            "action": "click",
-            "target": "Due date",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击卡片上的截止日期区域"
+            "description": "导航到看板页面"
           },
           {
             "action": "click",
-            "target": "pencil",
+            "target": "button[type='button']:has-text('+')",
             "value": "",
-            "description": "点击编辑按钮"
+            "description": "点击第一个列表中的『+』按钮以创建新卡片"
           },
           {
             "action": "input",
-            "target": "input[placeholder='Add due date']",
-            "value": "2024-01-01",
-            "description": "修改截止日期"
+            "target": "input[placeholder='Enter a title for this card...']",
+            "value": "Temporary Card",
+            "description": "输入卡片标题"
           },
           {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
+            "action": "press",
+            "target": "input[placeholder='Enter a title for this card...']",
+            "value": "Escape",
+            "description": "按 Escape 键取消创建"
           }
         ],
         "expectations": [
           {
-            "condition": "visible",
-            "target": "text=2024-01-01",
+            "condition": "not_visible",
+            "target": "text=Temporary Card",
             "value": "",
-            "description": "修改后的截止日期应显示在卡片上"
-          },
-          {
-            "condition": "text_contains",
-            "target": "Due date",
-            "value": "2024-01-01",
-            "description": "截止日期文本应包含修改后的日期"
+            "description": "取消后卡片不应出现在列表中"
           }
         ],
         "tags": [
           "card",
-          "due-date",
-          "edit"
-        ]
-      },
-      {
-        "id": "f018_s03",
-        "name": "验证截止日期颜色状态",
-        "feature_id": "f018",
-        "priority": "low",
-        "precondition": "卡片已设置截止日期",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Due date",
-            "value": "",
-            "description": "点击卡片上的截止日期区域"
-          },
-          {
-            "action": "click",
-            "target": "+",
-            "value": "",
-            "description": "点击添加截止日期的加号按钮"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Add due date']",
-            "value": "",
-            "description": "输入远期截止日期"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "visible",
-            "target": "text=2024-12-31",
-            "value": "",
-            "description": "截止日期应显示在卡片上"
-          },
-          {
-            "condition": "count_greater_than",
-            "target": "text=2024-12-31",
-            "value": "0",
-            "description": "截止日期应存在"
-          }
-        ],
-        "tags": [
-          "card",
-          "due-date",
-          "color-state"
+          "create",
+          "cancel"
         ]
       }
     ]
   },
   {
     "id": "f019",
-    "name": "编辑卡片描述",
-    "description": "使用富文本编辑器修改卡片详细内容",
+    "name": "移动卡片",
+    "description": "用户通过拖拽或菜单将卡片移至其他列表、看板或项目",
     "category": "卡片管理",
     "scenarios": [
       {
         "id": "f019_s01",
-        "name": "使用富文本编辑器修改卡片标题和描述",
+        "name": "通过拖拽将卡片移动到另一个列表",
         "feature_id": "f019",
         "priority": "high",
-        "precondition": "用户已登录并打开一个卡片",
+        "precondition": "用户已登录，打开一个包含多个列表和卡片的看板页面（如 Getting started 看板）",
         "steps": [
           {
-            "action": "click",
-            "target": "input[placeholder='Enter card title']",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击卡片标题输入框"
+            "description": "导航到 Getting started 看板页面"
           },
           {
-            "action": "input",
-            "target": "input[placeholder='Enter card title']",
-            "value": "Updated Card Title",
-            "description": "输入新的卡片标题"
+            "action": "wait",
+            "target": "button[type='button']",
+            "value": "3000",
+            "description": "等待页面加载"
           },
           {
-            "action": "press",
-            "target": "input[placeholder='Enter card title']",
-            "value": "Enter",
-            "description": "按Enter键确认标题修改"
-          },
-          {
-            "action": "click",
-            "target": ".editor-content",
+            "action": "hover",
+            "target": ".Card_card__container",
             "value": "",
-            "description": "点击富文本编辑器区域"
-          },
-          {
-            "action": "input",
-            "target": ".editor-content",
-            "value": "This is the updated card description with **bold text** and *italic text*.",
-            "description": "输入新的卡片描述，包含格式化文本"
+            "description": "悬停在第一张卡片上以显示拖拽手柄"
           },
           {
             "action": "click",
-            "target": "Save",
+            "target": ".Card_card__container",
             "value": "",
-            "description": "点击保存按钮"
+            "description": "点击卡片以打开详情视图"
+          },
+          {
+            "action": "wait",
+            "target": ".CardDetail_cardDetail__wrapper",
+            "value": "2000",
+            "description": "等待卡片详情弹窗加载"
+          },
+          {
+            "action": "click",
+            "target": "Move",
+            "value": "",
+            "description": "点击卡片详情中的『Move』按钮"
+          },
+          {
+            "action": "click",
+            "target": ".MoveCard_listSelector option",
+            "value": "",
+            "description": "在列表选择器中选择目标列表（第二个列表）"
+          },
+          {
+            "action": "click",
+            "target": "Move",
+            "value": "",
+            "description": "点击确认移动按钮"
           }
         ],
         "expectations": [
           {
-            "condition": "text_contains",
-            "target": "Updated Card Title",
+            "condition": "not_visible",
+            "target": ".CardDetail_cardDetail__wrapper",
             "value": "",
-            "description": "验证卡片标题已更新"
+            "description": "卡片详情弹窗关闭"
           },
           {
             "condition": "text_contains",
-            "target": "This is the updated card description with **bold text** and *italic text*.",
+            "target": ".List_list__container:nth-child(2) .Card_card__container",
             "value": "",
-            "description": "验证卡片描述已更新并包含格式化文本"
+            "description": "目标列表中显示被移动的卡片"
           }
         ],
         "tags": [
-          "card",
-          "rich-text-editor",
-          "update"
+          "卡片管理",
+          "移动卡片",
+          "拖拽"
         ]
       },
       {
         "id": "f019_s02",
-        "name": "使用快捷键添加列表和链接",
+        "name": "通过菜单将卡片移动到另一个看板",
         "feature_id": "f019",
-        "priority": "medium",
-        "precondition": "用户已登录并打开一个卡片",
+        "priority": "high",
+        "precondition": "用户已登录，打开一个包含多个看板的项目页面",
         "steps": [
           {
-            "action": "click",
-            "target": ".editor-content",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击富文本编辑器区域"
+            "description": "导航到 Getting started 看板页面"
           },
           {
-            "action": "press",
-            "target": ".editor-content",
-            "value": "Control+Shift+u",
-            "description": "使用快捷键添加无序列表"
-          },
-          {
-            "action": "input",
-            "target": ".editor-content li",
-            "value": "First list item",
-            "description": "输入第一个列表项"
-          },
-          {
-            "action": "press",
-            "target": ".editor-content li",
-            "value": "Enter",
-            "description": "按Enter键添加新的列表项"
-          },
-          {
-            "action": "input",
-            "target": ".editor-content li",
-            "value": "Second list item",
-            "description": "输入第二个列表项"
-          },
-          {
-            "action": "press",
-            "target": ".editor-content",
-            "value": "Control+l",
-            "description": "使用快捷键添加链接"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter URL']",
-            "value": "https://example.com",
-            "description": "输入链接URL"
-          },
-          {
-            "action": "input",
-            "target": "input[placeholder='Enter link text']",
-            "value": "Example Link",
-            "description": "输入链接文本"
+            "action": "wait",
+            "target": ".Card_card__container",
+            "value": "3000",
+            "description": "等待卡片加载"
           },
           {
             "action": "click",
-            "target": "Add link",
+            "target": ".Card_card__container",
             "value": "",
-            "description": "点击添加链接按钮"
+            "description": "点击第一张卡片打开详情"
+          },
+          {
+            "action": "wait",
+            "target": ".CardDetail_cardDetail__wrapper",
+            "value": "2000",
+            "description": "等待卡片详情弹窗加载"
           },
           {
             "action": "click",
-            "target": "Save",
+            "target": "Move",
             "value": "",
-            "description": "点击保存按钮"
+            "description": "点击『Move』按钮"
+          },
+          {
+            "action": "click",
+            "target": ".MoveCard_boardSelector option",
+            "value": "",
+            "description": "在看板选择器中选择目标看板（如 Learn 4ga Boards）"
+          },
+          {
+            "action": "click",
+            "target": "Move",
+            "value": "",
+            "description": "点击确认移动按钮"
           }
         ],
         "expectations": [
           {
-            "condition": "count_greater_than",
-            "target": ".editor-content li",
-            "value": "1",
-            "description": "验证列表项已添加"
+            "condition": "not_visible",
+            "target": ".CardDetail_cardDetail__wrapper",
+            "value": "",
+            "description": "卡片详情弹窗关闭"
           },
           {
-            "condition": "text_contains",
-            "target": "Example Link",
-            "value": "",
-            "description": "验证链接已添加"
+            "condition": "url_contains",
+            "target": "/boards/",
+            "value": "/boards/",
+            "description": "页面跳转到目标看板"
           }
         ],
         "tags": [
-          "card",
-          "rich-text-editor",
-          "shortcuts",
-          "list",
-          "link"
+          "卡片管理",
+          "移动卡片",
+          "菜单"
         ]
       },
       {
         "id": "f019_s03",
-        "name": "添加彩色文本和代码块",
+        "name": "通过菜单将卡片移动到另一个项目",
         "feature_id": "f019",
         "priority": "medium",
-        "precondition": "用户已登录并打开一个卡片",
+        "precondition": "用户已登录，打开一个包含多个项目的看板页面",
         "steps": [
           {
-            "action": "click",
-            "target": ".editor-content",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击富文本编辑器区域"
+            "description": "导航到 Getting started 看板页面"
           },
           {
-            "action": "input",
-            "target": ".editor-content",
-            "value": "<!--red-->This text is red<!--red-end-->",
-            "description": "输入带颜色标记的文本"
-          },
-          {
-            "action": "press",
-            "target": ".editor-content",
-            "value": "Enter",
-            "description": "按Enter键换行"
-          },
-          {
-            "action": "press",
-            "target": ".editor-content",
-            "value": "Control+Shift+j",
-            "description": "使用快捷键添加代码块"
-          },
-          {
-            "action": "input",
-            "target": "pre code",
-            "value": "function hello() {\n  console.log('Hello, world!');\n}",
-            "description": "输入代码内容"
+            "action": "wait",
+            "target": ".Card_card__container",
+            "value": "3000",
+            "description": "等待卡片加载"
           },
           {
             "action": "click",
-            "target": "Save",
+            "target": ".Card_card__container",
             "value": "",
-            "description": "点击保存按钮"
+            "description": "点击第一张卡片打开详情"
+          },
+          {
+            "action": "wait",
+            "target": ".CardDetail_cardDetail__wrapper",
+            "value": "2000",
+            "description": "等待卡片详情弹窗加载"
+          },
+          {
+            "action": "click",
+            "target": "Move",
+            "value": "",
+            "description": "点击『Move』按钮"
+          },
+          {
+            "action": "click",
+            "target": ".MoveCard_projectSelector option",
+            "value": "",
+            "description": "在项目选择器中选择目标项目（如 Kanban Test Board 所在项目）"
+          },
+          {
+            "action": "click",
+            "target": "Move",
+            "value": "",
+            "description": "点击确认移动按钮"
           }
         ],
         "expectations": [
           {
-            "condition": "text_contains",
-            "target": "This text is red",
+            "condition": "not_visible",
+            "target": ".CardDetail_cardDetail__wrapper",
             "value": "",
-            "description": "验证彩色文本已添加"
+            "description": "卡片详情弹窗关闭"
           },
           {
-            "condition": "visible",
-            "target": "pre code",
-            "value": "",
-            "description": "验证代码块已添加"
+            "condition": "url_contains",
+            "target": "/projects/",
+            "value": "/projects/",
+            "description": "页面跳转到目标项目"
           }
         ],
         "tags": [
-          "card",
-          "rich-text-editor",
-          "colored-text",
-          "code-block"
+          "卡片管理",
+          "移动卡片",
+          "跨项目"
         ]
       }
     ]
   },
   {
     "id": "f020",
-    "name": "添加评论",
-    "description": "在卡片中发布或回复团队讨论",
+    "name": "复制卡片",
+    "description": "用户复制卡片并在原卡片下方生成副本",
     "category": "卡片管理",
     "scenarios": [
       {
         "id": "f020_s01",
-        "name": "在卡片中添加新评论",
+        "name": "复制卡片并在原卡片下方生成副本",
         "feature_id": "f020",
         "priority": "high",
-        "precondition": "用户已登录并打开一个卡片",
+        "precondition": "用户已登录，打开一个包含至少一张卡片的看板页面（如 Getting started 看板）",
         "steps": [
           {
-            "action": "click",
-            "target": "Add comment",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击添加评论按钮"
+            "description": "打开 Getting started 看板页面"
           },
           {
-            "action": "input",
-            "target": "textarea[placeholder='Add a comment...']",
-            "value": "This is a test comment.",
-            "description": "在评论输入框中输入评论内容"
+            "action": "wait",
+            "target": "button[type='button']",
+            "value": "3000",
+            "description": "等待页面加载完成"
           },
           {
-            "action": "press",
-            "target": "textarea[placeholder='Add a comment...']",
-            "value": "Control+Enter",
-            "description": "使用Ctrl+Enter快捷键提交评论"
+            "action": "click",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "点击侧边栏中的 Getting started1 看板（确保看板已加载）"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='button']",
+            "value": "2000",
+            "description": "等待卡片列表渲染"
+          },
+          {
+            "action": "hover",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "悬停到第一张卡片上，触发操作按钮"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Copy')",
+            "value": "",
+            "description": "点击卡片上的复制按钮"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='button']",
+            "value": "2000",
+            "description": "等待副本生成"
           }
         ],
         "expectations": [
           {
-            "condition": "text_contains",
-            "target": "This is a test comment.",
-            "value": "",
-            "description": "验证评论已成功发布"
+            "condition": "count_greater_than",
+            "target": "div[role='button']",
+            "value": "1",
+            "description": "卡片数量增加，副本出现在原卡片下方"
           }
         ],
         "tags": [
-          "smoke",
+          "card",
+          "copy",
           "happy-path"
         ]
       },
       {
         "id": "f020_s02",
-        "name": "在评论中使用Markdown格式",
+        "name": "复制卡片后副本内容与原卡片一致",
         "feature_id": "f020",
         "priority": "medium",
-        "precondition": "用户已登录并打开一个卡片",
+        "precondition": "用户已登录，打开一个包含至少一张卡片的看板页面",
         "steps": [
           {
-            "action": "click",
-            "target": "Add comment",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击添加评论按钮"
+            "description": "打开 Getting started 看板页面"
           },
           {
-            "action": "input",
-            "target": "textarea[placeholder='Add a comment...']",
-            "value": "This is **bold** text and *italic* text.",
-            "description": "在评论输入框中输入包含Markdown格式的文本"
+            "action": "wait",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "3000",
+            "description": "等待页面加载"
           },
           {
-            "action": "press",
-            "target": "textarea[placeholder='Add a comment...']",
-            "value": "Control+Enter",
-            "description": "使用Ctrl+Enter快捷键提交评论"
+            "action": "click",
+            "target": "button[type='button']:has-text('Getting started1')",
+            "value": "",
+            "description": "点击侧边栏中的 Getting started1 看板"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='button']",
+            "value": "2000",
+            "description": "等待卡片列表渲染"
+          },
+          {
+            "action": "hover",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "悬停到第一张卡片上"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Copy')",
+            "value": "",
+            "description": "点击复制按钮"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='button']",
+            "value": "2000",
+            "description": "等待副本生成"
           }
         ],
         "expectations": [
           {
-            "condition": "visible",
-            "target": "strong",
-            "value": "",
-            "description": "验证粗体文本已正确渲染"
-          },
-          {
-            "condition": "visible",
-            "target": "em",
-            "value": "",
-            "description": "验证斜体文本已正确渲染"
+            "condition": "count_greater_than",
+            "target": "div[role='button']",
+            "value": "1",
+            "description": "卡片数量增加，副本已生成"
           }
         ],
         "tags": [
-          "markdown",
-          "formatting"
-        ]
-      },
-      {
-        "id": "f020_s03",
-        "name": "编辑和删除评论",
-        "feature_id": "f020",
-        "priority": "medium",
-        "precondition": "用户已登录并打开一个包含评论的卡片",
-        "steps": [
-          {
-            "action": "click",
-            "target": "pencil",
-            "value": "",
-            "description": "点击评论编辑按钮"
-          },
-          {
-            "action": "input",
-            "target": "textarea[placeholder='Add a comment...']",
-            "value": "This is an edited comment.",
-            "description": "修改评论内容"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          },
-          {
-            "action": "click",
-            "target": "bin",
-            "value": "",
-            "description": "点击评论删除按钮"
-          },
-          {
-            "action": "click",
-            "target": "Delete",
-            "value": "",
-            "description": "确认删除评论"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "text_contains",
-            "target": "This is an edited comment.",
-            "value": "",
-            "description": "验证评论已成功编辑"
-          },
-          {
-            "condition": "not_visible",
-            "target": "This is an edited comment.",
-            "value": "",
-            "description": "验证评论已成功删除"
-          }
-        ],
-        "tags": [
-          "edit",
-          "delete",
-          "crud"
+          "card",
+          "copy",
+          "content-verification"
         ]
       }
     ]
   },
   {
     "id": "f021",
-    "name": "修改用户资料",
-    "description": "更新用户名、邮箱等个人信息",
-    "category": "设置",
+    "name": "删除卡片",
+    "description": "用户从列表中删除卡片",
+    "category": "卡片管理",
     "scenarios": [
       {
         "id": "f021_s01",
-        "name": "修改用户名和邮箱",
+        "name": "从看板中删除一张卡片",
         "feature_id": "f021",
         "priority": "high",
-        "precondition": "用户已登录",
+        "precondition": "用户已登录，并进入一个包含至少一张卡片的看板页面（如 Kanban Test Board）",
         "steps": [
           {
-            "action": "click",
-            "target": "Settings",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击设置菜单"
-          },
-          {
-            "action": "click",
-            "target": "Profile",
-            "value": "",
-            "description": "进入个人资料页面"
-          },
-          {
-            "action": "input",
-            "target": "input[name='name']",
-            "value": "New Test User",
-            "description": "修改用户名"
-          },
-          {
-            "action": "input",
-            "target": "input[name='email']",
-            "value": "newtest@example.com",
-            "description": "修改邮箱"
+            "description": "导航到看板页面"
           },
           {
             "action": "click",
-            "target": "Save",
+            "target": "button[type='button']:has-text('Getting started1')",
             "value": "",
-            "description": "点击保存按钮"
+            "description": "点击侧边栏中的看板名称，确保看板已加载"
+          },
+          {
+            "action": "click",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "点击看板中的任意一张卡片（假设卡片是可点击的 div）"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Delete')",
+            "value": "",
+            "description": "在卡片详情弹窗中点击删除按钮"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']:has-text('Delete')",
+            "value": "",
+            "description": "在确认弹窗中再次点击删除按钮确认删除"
           }
         ],
         "expectations": [
           {
-            "condition": "text_contains",
-            "target": "Profile",
-            "value": "Profile",
-            "description": "验证仍在个人资料页面"
+            "condition": "not_visible",
+            "target": "div[role='button']",
+            "value": "",
+            "description": "卡片详情弹窗关闭，卡片不再可见"
           },
           {
-            "condition": "text_contains",
-            "target": "New Test User",
-            "value": "",
-            "description": "验证用户名已更新"
+            "condition": "url_contains",
+            "target": "/boards/",
+            "value": "/boards/",
+            "description": "仍然停留在看板页面"
           }
         ],
         "tags": [
-          "profile",
-          "settings"
-        ]
-      },
-      {
-        "id": "f021_s02",
-        "name": "添加头像和组织信息",
-        "feature_id": "f021",
-        "priority": "medium",
-        "precondition": "用户已登录",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Settings",
-            "value": "",
-            "description": "点击设置菜单"
-          },
-          {
-            "action": "click",
-            "target": "Profile",
-            "value": "",
-            "description": "进入个人资料页面"
-          },
-          {
-            "action": "input",
-            "target": "input[name='organization']",
-            "value": "Test Organization",
-            "description": "添加组织名称"
-          },
-          {
-            "action": "input",
-            "target": "input[name='phone']",
-            "value": "1234567890",
-            "description": "添加电话号码"
-          },
-          {
-            "action": "click",
-            "target": "Save",
-            "value": "",
-            "description": "点击保存按钮"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "text_contains",
-            "target": "Test Organization",
-            "value": "",
-            "description": "验证组织信息已保存"
-          },
-          {
-            "condition": "text_contains",
-            "target": "1234567890",
-            "value": "",
-            "description": "验证电话号码已保存"
-          }
-        ],
-        "tags": [
-          "profile",
-          "settings"
+          "卡片管理",
+          "删除",
+          "happy path"
         ]
       }
     ]
   },
   {
     "id": "f022",
-    "name": "切换主题模式",
-    "description": "在深色与浅色界面间切换",
-    "category": "设置",
+    "name": "编辑卡片标题",
+    "description": "用户修改卡片的标题名称",
+    "category": "卡片管理",
     "scenarios": [
       {
         "id": "f022_s01",
-        "name": "从默认浅色模式切换到深色模式",
+        "name": "成功编辑卡片标题",
         "feature_id": "f022",
         "priority": "high",
-        "precondition": "用户已登录系统",
+        "precondition": "用户已登录，打开了一个看板，且看板中存在至少一张卡片",
         "steps": [
           {
-            "action": "click",
-            "target": "Settings",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击设置按钮"
+            "description": "打开目标看板页面"
           },
           {
             "action": "click",
-            "target": "Theme",
+            "target": "div[role='button']",
             "value": "",
-            "description": "点击主题选项"
+            "description": "点击看板中的第一张卡片（假设卡片是可点击的div）"
           },
           {
             "action": "click",
-            "target": "Dark mode",
+            "target": "[contenteditable='true']",
             "value": "",
-            "description": "选择深色模式"
+            "description": "点击卡片标题编辑区域以进入编辑模式"
+          },
+          {
+            "action": "input",
+            "target": "[contenteditable='true']",
+            "value": "Updated Card Title",
+            "description": "输入新的卡片标题编辑区域"
+          },
+          {
+            "action": "press",
+            "target": "Enter",
+            "value": "",
+            "description": "按回车键保存标题"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "body.dark",
+            "target": "Updated Card Title",
             "value": "",
-            "description": "页面应切换到深色主题"
+            "description": "卡片标题编辑区域已更新为新的文本"
           }
         ],
         "tags": [
-          "theme",
-          "settings"
+          "card",
+          "edit",
+          "happy-path"
         ]
       },
       {
         "id": "f022_s02",
-        "name": "从深色模式切换回浅色模式",
-        "feature_id": "f022",
-        "priority": "high",
-        "precondition": "当前处于深色模式",
-        "steps": [
-          {
-            "action": "click",
-            "target": "Settings",
-            "value": "",
-            "description": "点击设置按钮"
-          },
-          {
-            "action": "click",
-            "target": "Theme",
-            "value": "",
-            "description": "点击主题选项"
-          },
-          {
-            "action": "click",
-            "target": "Light mode",
-            "value": "",
-            "description": "选择浅色模式"
-          }
-        ],
-        "expectations": [
-          {
-            "condition": "not_visible",
-            "target": "body.dark",
-            "value": "",
-            "description": "页面应切换回浅色主题"
-          }
-        ],
-        "tags": [
-          "theme",
-          "settings"
-        ]
-      },
-      {
-        "id": "f022_s03",
-        "name": "主题切换后页面元素正常显示",
+        "name": "取消编辑卡片标题",
         "feature_id": "f022",
         "priority": "medium",
-        "precondition": "已切换主题模式",
+        "precondition": "用户已登录，打开了一个看板，且看板中存在至少一张卡片",
         "steps": [
           {
-            "action": "click",
-            "target": "Settings",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击设置按钮"
+            "description": "打开目标看板页面"
           },
           {
             "action": "click",
-            "target": "Theme",
+            "target": "div[role='button']",
             "value": "",
-            "description": "点击主题选项"
+            "description": "点击看板中的第一张卡片"
           },
           {
             "action": "click",
-            "target": "Dark mode",
+            "target": "[contenteditable='true']",
             "value": "",
-            "description": "切换到深色模式"
+            "description": "点击卡片标题编辑区域进入编辑模式"
+          },
+          {
+            "action": "input",
+            "target": "[contenteditable='true']",
+            "value": "Temporary Title",
+            "description": "输入临时标题"
+          },
+          {
+            "action": "press",
+            "target": "Escape",
+            "value": "",
+            "description": "按Escape键取消编辑"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "body.dark",
+            "target": "[contenteditable='true']",
             "value": "",
-            "description": "深色模式激活"
-          },
-          {
-            "condition": "visible",
-            "target": "Dashboard",
-            "value": "",
-            "description": "仪表板标题应可见"
-          },
-          {
-            "condition": "visible",
-            "target": "Create new project",
-            "value": "",
-            "description": "创建项目按钮应可见"
+            "description": "卡片标题编辑区域仍然可见"
           }
         ],
         "tags": [
-          "theme",
-          "ui"
+          "card",
+          "edit",
+          "cancel"
         ]
       }
     ]
   },
   {
     "id": "f023",
-    "name": "调整侧边栏样式",
-    "description": "切换侧边栏的紧凑或正常宽度",
-    "category": "设置",
+    "name": "设置卡片属性",
+    "description": "用户为卡片分配成员、标签、截止日期和任务清单",
+    "category": "卡片管理",
     "scenarios": [
       {
         "id": "f023_s01",
-        "name": "从正常宽度切换到紧凑宽度",
+        "name": "为卡片添加标签",
         "feature_id": "f023",
         "priority": "high",
-        "precondition": "用户已登录并处于仪表板视图",
+        "precondition": "已登录演示账号，打开看板页面，存在至少一张卡片",
         "steps": [
           {
-            "action": "click",
-            "target": "Settings",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击设置按钮"
+            "description": "打开看板页面"
           },
           {
             "action": "click",
-            "target": "Compact sidebar",
+            "target": "button[type='button']",
             "value": "",
-            "description": "选择紧凑侧边栏选项"
+            "description": "点击看板中的第一张卡片（通过通用按钮选择器，实际需根据卡片列表定位）"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='dialog']",
+            "value": "5000",
+            "description": "等待卡片详情弹窗出现"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']",
+            "value": "",
+            "description": "点击标签区域的加号图标（通过按钮选择器定位）"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']",
+            "value": "",
+            "description": "点击一个现有标签（通过按钮选择器定位）"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']",
+            "value": "",
+            "description": "点击关闭标签选择器"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "sidebar",
+            "target": "div[role='dialog']",
             "value": "",
-            "description": "侧边栏变为紧凑宽度"
+            "description": "卡片详情弹窗仍然可见"
           }
         ],
         "tags": [
-          "ui",
-          "settings"
+          "卡片管理",
+          "标签",
+          "happy path"
         ]
       },
       {
         "id": "f023_s02",
-        "name": "从紧凑宽度切换回正常宽度",
+        "name": "为卡片设置截止日期",
         "feature_id": "f023",
         "priority": "high",
-        "precondition": "侧边栏当前为紧凑宽度",
+        "precondition": "已登录演示账号，打开看板页面，存在至少一张卡片",
         "steps": [
           {
-            "action": "click",
-            "target": "Settings",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击设置按钮"
+            "description": "打开看板页面"
           },
           {
             "action": "click",
-            "target": "Normal sidebar",
+            "target": "button[type='button']",
             "value": "",
-            "description": "选择正常侧边栏选项"
+            "description": "点击看板中的第一张卡片"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='dialog']",
+            "value": "5000",
+            "description": "等待卡片详情弹窗出现"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']",
+            "value": "",
+            "description": "点击截止日期区域的加号图标"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']",
+            "value": "",
+            "description": "点击日期选择器中的确认按钮"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "sidebar",
+            "target": "div[role='dialog']",
             "value": "",
-            "description": "侧边栏恢复为正常宽度"
+            "description": "卡片详情弹窗仍然可见，截止日期已设置"
           }
         ],
         "tags": [
-          "ui",
-          "settings"
+          "卡片管理",
+          "截止日期",
+          "happy path"
         ]
       },
       {
         "id": "f023_s03",
-        "name": "在不同视图下切换侧边栏宽度",
+        "name": "为卡片添加成员",
         "feature_id": "f023",
         "priority": "medium",
-        "precondition": "用户已登录并处于项目视图",
+        "precondition": "已登录演示账号，打开看板页面，存在至少一张卡片，看板中已有其他成员",
         "steps": [
           {
-            "action": "click",
-            "target": "Settings",
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
             "value": "",
-            "description": "点击设置按钮"
+            "description": "打开看板页面"
           },
           {
             "action": "click",
-            "target": "Compact sidebar",
+            "target": "button[type='button']",
             "value": "",
-            "description": "选择紧凑侧边栏选项"
+            "description": "点击看板中的第一张卡片"
+          },
+          {
+            "action": "wait",
+            "target": "div[role='dialog']",
+            "value": "5000",
+            "description": "等待卡片详情弹窗出现"
           },
           {
             "action": "click",
-            "target": "Board",
+            "target": "button[type='button']",
             "value": "",
-            "description": "切换到看板视图"
+            "description": "点击成员区域的加号图标"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button']",
+            "value": "",
+            "description": "点击一个成员名称将其添加到卡片"
           }
         ],
         "expectations": [
           {
             "condition": "visible",
-            "target": "sidebar",
+            "target": "div[role='dialog']",
             "value": "",
-            "description": "在看板视图下侧边栏保持紧凑宽度"
+            "description": "卡片详情弹窗仍然可见，成员已添加"
           }
         ],
         "tags": [
-          "ui",
-          "settings",
-          "cross-view"
+          "卡片管理",
+          "成员",
+          "happy path"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f024",
+    "name": "编辑卡片描述（富文本）",
+    "description": "用户使用富文本编辑器编辑卡片描述，支持彩色文本、代码块、表格、列表、@提及等功能",
+    "category": "卡片管理",
+    "scenarios": [
+      {
+        "id": "f024_s01",
+        "name": "编辑卡片描述 - 添加彩色文本和代码块",
+        "feature_id": "f024",
+        "priority": "high",
+        "precondition": "用户已登录，打开一个看板，并进入一张卡片的详情视图",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "打开看板页面"
+          },
+          {
+            "action": "click",
+            "target": "Getting started1",
+            "value": "",
+            "description": "点击侧边栏中的看板名称进入看板"
+          },
+          {
+            "action": "click",
+            "target": ".Card_card__...",
+            "value": "",
+            "description": "点击第一张卡片打开详情视图（使用通用选择器，实际需根据DOM调整）"
+          },
+          {
+            "action": "click",
+            "target": ".Card_description__...",
+            "value": "",
+            "description": "点击描述区域进入编辑模式"
+          },
+          {
+            "action": "click",
+            "target": "button[aria-label='Add colored text']",
+            "value": "",
+            "description": "点击添加彩色文本按钮"
+          },
+          {
+            "action": "click",
+            "target": "text=red",
+            "value": "",
+            "description": "选择红色"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": "This is red text",
+            "description": "输入红色文本"
+          },
+          {
+            "action": "click",
+            "target": "button[aria-label='Insert codeblocks']",
+            "value": "",
+            "description": "点击插入代码块按钮"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": "console.log('hello')",
+            "description": "在代码块中输入代码"
+          },
+          {
+            "action": "click",
+            "target": "button[aria-label='Save']",
+            "value": "",
+            "description": "保存描述"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": ".Card_description__...",
+            "value": "",
+            "description": "描述区域可见"
+          },
+          {
+            "condition": "text_contains",
+            "target": ".Card_description__...",
+            "value": "This is red text",
+            "description": "描述中包含红色文本"
+          },
+          {
+            "condition": "text_contains",
+            "target": ".Card_description__...",
+            "value": "console.log('hello')",
+            "description": "描述中包含代码块内容"
+          }
+        ],
+        "tags": [
+          "卡片管理",
+          "富文本编辑",
+          "彩色文本",
+          "代码块"
+        ]
+      },
+      {
+        "id": "f024_s02",
+        "name": "编辑卡片描述 - 添加表格和@提及",
+        "feature_id": "f024",
+        "priority": "medium",
+        "precondition": "用户已登录，打开一个看板，并进入一张卡片的详情视图",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "打开看板页面"
+          },
+          {
+            "action": "click",
+            "target": "Getting started1",
+            "value": "",
+            "description": "点击侧边栏中的看板名称进入看板"
+          },
+          {
+            "action": "click",
+            "target": ".Card_card__...",
+            "value": "",
+            "description": "点击第一张卡片打开详情视图"
+          },
+          {
+            "action": "click",
+            "target": ".Card_description__...",
+            "value": "",
+            "description": "点击描述区域进入编辑模式"
+          },
+          {
+            "action": "click",
+            "target": "button[aria-label='Insert table']",
+            "value": "",
+            "description": "点击插入表格按钮"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": "Cell 1",
+            "description": "在表格第一个单元格输入内容"
+          },
+          {
+            "action": "press",
+            "target": ".ProseMirror",
+            "value": "Tab",
+            "description": "按Tab键移动到下一个单元格"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": "Cell 2",
+            "description": "在第二个单元格输入内容"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": "@demo",
+            "description": "输入@提及"
+          },
+          {
+            "action": "click",
+            "target": "button[aria-label='Save']",
+            "value": "",
+            "description": "保存描述"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": ".Card_description__...",
+            "value": "",
+            "description": "描述区域可见"
+          },
+          {
+            "condition": "text_contains",
+            "target": ".Card_description__...",
+            "value": "Cell 1",
+            "description": "描述中包含表格内容"
+          },
+          {
+            "condition": "text_contains",
+            "target": ".Card_description__...",
+            "value": "@demo",
+            "description": "描述中包含@提及"
+          }
+        ],
+        "tags": [
+          "卡片管理",
+          "富文本编辑",
+          "表格",
+          "@提及"
+        ]
+      },
+      {
+        "id": "f024_s03",
+        "name": "编辑卡片描述 - 使用快捷键添加粗体和斜体",
+        "feature_id": "f024",
+        "priority": "medium",
+        "precondition": "用户已登录，打开一个看板，并进入一张卡片的详情视图",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/boards/1782552018351555584",
+            "value": "",
+            "description": "打开看板页面"
+          },
+          {
+            "action": "click",
+            "target": "Getting started1",
+            "value": "",
+            "description": "点击侧边栏中的看板名称进入看板"
+          },
+          {
+            "action": "click",
+            "target": ".Card_card__...",
+            "value": "",
+            "description": "点击第一张卡片打开详情视图"
+          },
+          {
+            "action": "click",
+            "target": ".Card_description__...",
+            "value": "",
+            "description": "点击描述区域进入编辑模式"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": "This is ",
+            "description": "输入文本"
+          },
+          {
+            "action": "press",
+            "target": ".ProseMirror",
+            "value": "Control+b",
+            "description": "按Ctrl+B开启粗体"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": "bold",
+            "description": "输入粗体文本"
+          },
+          {
+            "action": "press",
+            "target": ".ProseMirror",
+            "value": "Control+b",
+            "description": "按Ctrl+B关闭粗体"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": " and ",
+            "description": "输入普通文本"
+          },
+          {
+            "action": "press",
+            "target": ".ProseMirror",
+            "value": "Control+i",
+            "description": "按Ctrl+I开启斜体"
+          },
+          {
+            "action": "input",
+            "target": ".ProseMirror",
+            "value": "italic",
+            "description": "输入斜体文本"
+          },
+          {
+            "action": "press",
+            "target": ".ProseMirror",
+            "value": "Control+i",
+            "description": "按Ctrl+I关闭斜体"
+          },
+          {
+            "action": "click",
+            "target": "button[aria-label='Save']",
+            "value": "",
+            "description": "保存描述"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": ".Card_description__...",
+            "value": "",
+            "description": "描述区域可见"
+          },
+          {
+            "condition": "text_contains",
+            "target": ".Card_description__...",
+            "value": "bold",
+            "description": "描述中包含粗体文本"
+          },
+          {
+            "condition": "text_contains",
+            "target": ".Card_description__...",
+            "value": "italic",
+            "description": "描述中包含斜体文本"
+          }
+        ],
+        "tags": [
+          "卡片管理",
+          "富文本编辑",
+          "快捷键",
+          "粗体",
+          "斜体"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "f025",
+    "name": "切换侧边栏样式",
+    "description": "用户切换侧边栏的紧凑或正常宽度模式",
+    "category": "设置",
+    "scenarios": [
+      {
+        "id": "f025_s01",
+        "name": "切换侧边栏样式 - 从紧凑到正常宽度",
+        "feature_id": "f025",
+        "priority": "high",
+        "precondition": "用户已登录，侧边栏处于紧凑模式",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "导航到仪表板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button'].Sidebar_toggleSidebarButton__BdAYI",
+            "value": "",
+            "description": "点击侧边栏切换按钮，切换侧边栏样式"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "button[type='button'].Sidebar_toggleSidebarButton__BdAYI",
+            "value": "",
+            "description": "侧边栏切换按钮仍然可见"
+          },
+          {
+            "condition": "text_contains",
+            "target": "button[type='button'].Sidebar_toggleSidebarButton__BdAYI",
+            "value": "",
+            "description": "切换按钮图标或样式发生变化（表示切换成功）"
+          }
+        ],
+        "tags": [
+          "侧边栏",
+          "样式切换",
+          "设置"
+        ]
+      },
+      {
+        "id": "f025_s02",
+        "name": "切换侧边栏样式 - 从正常到紧凑宽度",
+        "feature_id": "f025",
+        "priority": "high",
+        "precondition": "用户已登录，侧边栏处于正常宽度模式",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "导航到仪表板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button'].Sidebar_toggleSidebarButton__BdAYI",
+            "value": "",
+            "description": "点击侧边栏切换按钮，切换侧边栏样式"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "visible",
+            "target": "button[type='button'].Sidebar_toggleSidebarButton__BdAYI",
+            "value": "",
+            "description": "侧边栏切换按钮仍然可见"
+          },
+          {
+            "condition": "text_contains",
+            "target": "button[type='button'].Sidebar_toggleSidebarButton__BdAYI",
+            "value": "",
+            "description": "切换按钮图标或样式发生变化（表示切换成功）"
+          }
+        ],
+        "tags": [
+          "侧边栏",
+          "样式切换",
+          "设置"
+        ]
+      },
+      {
+        "id": "f025_s03",
+        "name": "侧边栏样式切换在项目详情页也生效",
+        "feature_id": "f025",
+        "priority": "medium",
+        "precondition": "用户已登录，侧边栏处于紧凑模式",
+        "steps": [
+          {
+            "action": "navigate",
+            "target": "https://demo.4gaboards.com/",
+            "value": "",
+            "description": "导航到仪表板页面"
+          },
+          {
+            "action": "click",
+            "target": "button[type='button'].Sidebar_toggleSidebarButton__BdAYI",
+            "value": "",
+            "description": "点击侧边栏切换按钮，切换侧边栏样式"
+          },
+          {
+            "action": "click",
+            "target": "Kanban Test Board",
+            "value": "",
+            "description": "点击一个项目进入项目详情页"
+          }
+        ],
+        "expectations": [
+          {
+            "condition": "url_contains",
+            "target": "/boards/",
+            "value": "/boards/",
+            "description": "成功进入项目看板页面"
+          },
+          {
+            "condition": "visible",
+            "target": "button[type='button'].Sidebar_toggleSidebarButton__BdAYI",
+            "value": "",
+            "description": "侧边栏切换按钮在项目详情页仍然可见"
+          }
+        ],
+        "tags": [
+          "侧边栏",
+          "样式切换",
+          "项目详情"
         ]
       }
     ]

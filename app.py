@@ -55,10 +55,12 @@ def save_cfg(cfg: dict):
         json.dump(cfg, f)
 
 def load_cfg() -> dict:
+    from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, LLM_MODEL
+
     defaults = dict(
-        api_key="",
-        base_url="https://open.bigmodel.cn/api/paas/v4/",
-        model="glm-4-plus",
+        api_key="" if DEEPSEEK_API_KEY.startswith("your-") else DEEPSEEK_API_KEY,
+        base_url=DEEPSEEK_BASE_URL,
+        model=LLM_MODEL,
         app_url="https://demo.4gaboards.com",
         docs_url="https://docs.4gaboards.com",
         username="demo@demo.demo", password="demo",
@@ -81,17 +83,17 @@ def render_sidebar() -> dict:
         cfg = load_cfg()
 
         st.markdown("**🤖 大模型设置**")
-        api_key  = st.text_input("GLM API Key", value=cfg["api_key"],
-                                  type="password", help="智谱 AI API Key（在 bigmodel.cn 获取）")
-        model_options = ["glm-4-plus", "glm-4-air", "glm-4-flash", "glm-4.6"]
+        api_key  = st.text_input("DeepSeek API Key", value=cfg["api_key"],
+                                  type="password", help="DeepSeek API Key（在 platform.deepseek.com 获取）")
+        model_options = ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-flash", "deepseek-v4-pro"]
         model    = st.selectbox(
             "模型",
             model_options,
             index=model_options.index(cfg["model"]) if cfg["model"] in model_options else 0,
-            help="推荐 glm-4-plus（非思考型，输出 JSON 稳定）；glm-4.6 为思考型，速度慢",
+            help="推荐 deepseek-chat（输出 JSON 更稳定）；deepseek-reasoner / v4 模型可能产生 reasoning_content，速度较慢",
         )
         base_url = st.text_input("API Base URL", value=cfg["base_url"],
-                                  help="OpenAI 兼容接口；切换到 DeepSeek/Qwen 时改这里即可")
+                                  help="OpenAI 兼容接口；切换到 GLM/Qwen 时改这里即可")
 
         st.divider()
         st.markdown("**🌐 测试目标**")
@@ -169,7 +171,7 @@ def tab_generate(cfg: dict):
 
     if st.button("🚀 开始生成测试场景", type="primary", disabled=not cfg["api_key"]):
         if not cfg["api_key"]:
-            st.error("请先在侧边栏填写 GLM API Key")
+            st.error("请先在侧边栏填写 DeepSeek API Key")
         else:
             _do_generate(cfg, use_cache and not force_rebuild, use_local=source_local)
 
@@ -567,6 +569,17 @@ def tab_graph():
 
     # 统计
     stats = kg.stats() or {}
+    if not stats.get("features"):
+        features_data = load_json("data/features.json") or []
+        scenarios_data = load_json("data/test_scenarios.json") or []
+        if features_data and scenarios_data:
+            try:
+                kg.ingest(features_data, scenarios_data)
+                stats = kg.stats() or {}
+                st.success("已从现有 JSON 数据初始化知识图谱")
+            except Exception as e:
+                st.warning(f"从现有 JSON 初始化知识图谱失败：{e}")
+
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("分类", stats.get("categories", 0))
     c2.metric("功能点", stats.get("features", 0))

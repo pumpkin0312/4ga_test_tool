@@ -1,197 +1,253 @@
 # 4ga Boards 智能测试工具
 
-基于国产大模型（GLM / DeepSeek / Qwen）的测试场景自动生成与智能执行平台。
+一个面向 4ga Boards 看板应用的自动化测试平台：从官方文档中提取功能点，使用 RAG + 大模型生成结构化测试场景，再由 Playwright 智能体在真实浏览器中执行、截图并生成报告。
 
-针对 4ga Boards 看板应用，从**本地用户手册（Markdown）** 提取功能知识，自动生成结构化测试场景，
-并由「规划-记忆-执行-验证」智能体在真实浏览器中执行验证。
+项目默认使用 DeepSeek 的 OpenAI 兼容接口，也可以切换到其他兼容接口的大模型。
 
-**多模态知识底座**：
-- 🟢 **Qdrant**（向量数据库，嵌入式持久化）—— 语义检索文档片段
-- 🟢 **Neo4j**（图数据库）—— 「功能点 → 场景 → 步骤」关系建模与多跳查询
-- 🟢 **JSON / 键值文件**（本地）—— 配置、缓存、中间结果
-- Neo4j 未启动时**自动降级**到 networkx 嵌入式实现，无外部依赖也能跑
+## 功能特性
+
+- **RAG 场景生成**：读取本地 4ga Boards Markdown 文档，构建向量索引，自动生成可执行测试场景。
+- **DOM 快照约束**：抓取真实页面 DOM，减少 LLM 编造 selector、URL 和按钮文案的问题。
+- **知识图谱**：将 Category、Feature、Scenario、Step 写入 Neo4j；Neo4j 不可用时自动降级到 networkx。
+- **智能执行 Agent**：基于 Planner、Memory、Executor、Verifier 的执行链路，自动处理登录、进入项目、打开看板等前置步骤。
+- **页面感知 Resolver**：执行前读取真实页面元素，对齐 LLM 生成的 target 与当前 DOM。
+- **测试报告与截图**：执行结果保存为 JSON，截图保存在 `reports/` 目录，Streamlit 页面可视化查看。
 
 ## 项目结构
 
-```
-4ga_test_tool/
-├── app.py                  # Streamlit 主界面（唯一入口）
-├── config.py               # 全局配置（含本地文档路径 LOCAL_DOCS_DIR）
-├── llm_client.py           # 统一 LLM 调用封装（OpenAI 兼容接口）
-├── requirements.txt        # 依赖列表
-├── .env.example            # 环境变量示例
-├── docker-compose.yml      # Neo4j 服务（可选启动）
+```text
+.
+├── app.py                         # Streamlit 主界面
+├── config.py                      # 全局配置
+├── llm_client.py                  # OpenAI 兼容 LLM 调用封装
+├── requirements.txt               # Python 依赖
+├── docker-compose.yml             # 可选 Neo4j 服务
 ├── task1_rag/
-│   ├── crawler.py          # 知识源加载（本地 Markdown 优先 / 网络爬取兜底）
-│   ├── rag_engine.py       # Qdrant 向量检索引擎（FAISS fallback）
-│   ├── knowledge_graph.py  # 知识图谱（Neo4j / networkx 兜底）
-│   └── scenario_gen.py     # 功能点提取 + 测试场景生成 + 图谱写入
+│   ├── crawler.py                 # 文档加载与爬取
+│   ├── rag_engine.py              # Qdrant / FAISS 向量检索
+│   ├── knowledge_graph.py         # Neo4j / networkx 知识图谱
+│   ├── dom_snapshot.py            # 真实 DOM 快照抓取
+│   └── scenario_gen.py            # 功能点提取与测试场景生成
 ├── task2_agent/
-│   ├── memory.py           # 执行记忆
-│   ├── executor.py         # Playwright 浏览器执行器
-│   ├── planner.py          # 规划器（智能注入前置：登录/进项目/打开看板）
-│   ├── resolver.py         # 页面感知 Resolver（执行前对齐 target 与真实 DOM）
-│   ├── verifier.py         # 规则 + LLM 综合验证
-│   └── agent.py            # 智能体主控
-├── data/                   # 运行时生成（功能点 / 场景 JSON / 向量索引）
-└── reports/                # 运行时生成（测试报告、截图）
-
-# 项目同级目录还需放置：
-../4gaboards_doc/4gaboards/  # 4ga Boards 官方 Markdown 文档（解压自 4gaboards_doc.zip）
+│   ├── agent.py                   # 测试智能体主控
+│   ├── planner.py                 # 前置步骤规划
+│   ├── executor.py                # Playwright 浏览器执行器
+│   ├── resolver.py                # 页面感知 target 修正
+│   ├── verifier.py                # 规则验证 + LLM 综合判断
+│   └── memory.py                  # 执行轨迹记忆
+├── data/
+│   ├── features.json              # 已生成的功能点
+│   ├── test_scenarios.json        # 已生成的测试场景
+│   └── dom_snapshots.json         # DOM 快照
+├── test_data/
+│   └── 4gaboards_export.tgz       # 导入看板测试夹具
+└── reports/                       # 测试报告与截图，运行时生成
 ```
 
-## 知识源说明（重要）
+## 环境要求
 
-本项目**优先读取本地完整 Markdown 文档**，比网络爬取更可靠且内容更完整：
-
-| 知识源 | 推荐度 | 说明 |
-|---|---|---|
-| 📁 本地 Markdown（默认） | ⭐⭐⭐⭐⭐ | 读取 `../4gaboards_doc/4gaboards/**/*.md`，共 ~34KB / 15 个文件 |
-| 🗃️ 缓存索引 | ⭐⭐⭐⭐ | 复用上次构建的向量索引，省 30 秒重新嵌入时间 |
-| 🌐 网络爬取 | ⭐⭐ | 仅作 fallback：当本地文档缺失时尝试 `docs.4gaboards.com` |
-
-`config.LOCAL_DOCS_DIR` 默认指向 `../4gaboards_doc/4gaboards`。
-若你的 markdown 放在其他位置，修改此配置或调整目录结构即可。
+- Python 3.10 或更高版本
+- Chromium 浏览器依赖，由 Playwright 安装
+- DeepSeek API Key 或其他 OpenAI 兼容接口 Key
+- Docker 可选，仅用于启动 Neo4j 图数据库
 
 ## 快速开始
 
-### 1. 准备文档（首次必做）
-
-把 `4gaboards_doc.zip` 解压到项目**上一级**目录：
+1. 克隆项目并进入目录：
 
 ```bash
-# 在项目同级目录下
-unzip 4gaboards_doc.zip -d ./
-# 解压后应当有：4gaboards_doc/4gaboards/For_Users/*.md 等
+git clone <your-repo-url>
+cd 4ga_test_tool-main
 ```
 
-### 2. 安装依赖
+2. 创建虚拟环境并安装依赖：
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 playwright install chromium
 ```
 
-### 3. 配置 API Key
+3. 配置环境变量：
 
-方式一：复制 `.env.example` 为 `.env`，填入 Key：
 ```bash
 cp .env.example .env
-# 编辑 .env，填入 GLM_API_KEY=your-zhipu-api-key
 ```
 
-方式二：直接在启动后的 Web 界面侧边栏填写。
+然后编辑 `.env`：
 
-> 智谱 GLM API Key 可在 https://bigmodel.cn 获取。
-> 项目使用 OpenAI 兼容接口调用，如需切换 DeepSeek / Qwen 等其他国产模型，
-> 只需修改侧边栏的 **API Base URL** 与 **模型** 即可，代码无需改动。
-
-### 4. （可选）启动 Neo4j 图数据库
-
-如果有 Docker，启动 Neo4j 即可在知识图谱面板看到「Neo4j Browser 直连」效果：
-
-```bash
-docker-compose up -d neo4j
-# Neo4j Browser: http://localhost:7474   账号 neo4j / 密码 test1234
+```env
+DEEPSEEK_API_KEY=your-deepseek-api-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-chat
 ```
 
-**不启动也没关系**——工具会自动降级到 networkx 嵌入式实现，所有功能正常。
-
-### 5. 启动界面
+4. 启动 Web 界面：
 
 ```bash
 streamlit run app.py
 ```
 
-浏览器会自动打开 `http://localhost:8501`，三个标签页：
-- 📋 任务一：场景生成（含可视化）
-- 🤖 任务二：测试执行（含报告）
-- 🕸️ 知识图谱：Category → Feature → Scenario → Step 关系图
-
----
+默认访问地址为 `http://localhost:8501`。
 
 ## 使用流程
 
-### 任务一：生成测试场景
+### 1. 生成 DOM 快照
 
-1. 在侧边栏填写 GLM API Key，点击「💾 保存配置」
-2. 切换到 **Tab 1「场景生成」**
-3. 勾选「📁 使用本地完整文档（推荐）」（默认已勾选）
-4. 点击「🚀 开始生成测试场景」
-5. 等待三个步骤完成：**加载本地文档** → 构建 Qdrant 向量索引 → LLM 生成功能点与场景并自动写入 Neo4j
-6. 在下方按分类树形浏览功能点和测试场景；切到 Tab 3 可看知识图谱
+项目已经包含 `data/dom_snapshots.json`。如果页面结构变化，可以重新抓取：
 
-预期：约 20-30 个功能点，60-80 个测试场景，覆盖用户/项目/看板/列表/卡片/设置 6 大分类。
+```bash
+python3 -m task1_rag.dom_snapshot
+```
 
-### 任务二：执行测试
+DOM 快照会被注入到场景生成 prompt 中，用于约束 selector、按钮文本和 URL 预期。
 
-1. 完成任务一后切换到 **Tab 2「测试执行」**
-2. 在侧边栏可勾选「🔍 页面感知（Page-aware Resolver）」开启幻觉防护（默认开启）
-3. 选择要执行的场景（建议先选 5 个简单场景验证环境）
-4. 点击「▶️ 开始执行测试」
-5. 执行完成后查看报告：步骤通过率、预期验证、失败截图、LLM 综合诊断
+### 2. 生成测试场景
 
-中断后可点击「🔄 重置 UI」恢复，已完成的场景结果会写入 `reports/test_report_*_running.json`。
+打开 Streamlit 后进入 **任务一：场景生成**：
 
----
+1. 在侧边栏填写 API Key、模型和目标应用信息。
+2. 勾选“使用本地完整文档”。
+3. 点击“开始生成测试场景”。
+4. 生成结果会写入：
 
-## 智能体特性（任务二）
+```text
+data/features.json
+data/test_scenarios.json
+data/knowledge_graph.json
+```
 
-- **「规划-记忆-执行-验证」四要素架构**
-- **页面感知 Resolver**：执行前快速校验 target 是否存在于当前页面，找不到时调用 LLM 从页面真实元素中重定向，**降低 LLM 幻觉造成的执行失败**
-- **智能前置注入**：planner 根据场景 `precondition` 自动注入「登录 → 进项目 → 开看板」前置步骤
-- **对话框作用域优先查找**：解决 4ga Boards 中「侧边栏 + Add Project」与「对话框内 + Add Project」按钮同名歧义
-- **严格文本可见性验证**：排除 input/textarea 的 value 残留，避免假阳性 PASS
-- **失败原因联动**：规则验证全部未通过时强制将 LLM 综合结果降级为 FAIL
-- **连续失败提前跳出**：单场景连续 3 步失败自动终止，避免拖死全量执行
+当前版本已准备好一份生成结果：25 个功能点、54 个测试场景。
 
----
+### 3. 执行测试
+
+进入 **任务二：测试执行**：
+
+1. 选择少量场景先进行冒烟测试。
+2. 建议保持“页面感知 Resolver”开启。
+3. 点击“开始执行测试”。
+4. 执行报告会保存到：
+
+```text
+reports/test_report_*.json
+reports/screenshots*/
+```
+
+### 4. 查看知识图谱
+
+进入 **知识图谱** 标签页，可以查看：
+
+- 功能分类
+- 功能点
+- 测试场景
+- 操作步骤
+
+默认使用 networkx 兜底图谱。若要使用 Neo4j：
+
+```bash
+docker-compose up -d neo4j
+```
+
+Neo4j Browser 地址：
+
+```text
+http://localhost:7474
+账号：neo4j
+密码：test1234
+```
+
+## 命令行运行
+
+除 Streamlit 外，也可以直接运行核心模块。
+
+构建或加载文档索引并生成场景：
+
+```bash
+python3 -m task1_rag.scenario_gen
+```
+
+重新抓取 DOM 快照：
+
+```bash
+python3 -m task1_rag.dom_snapshot
+```
 
 ## 配置说明
 
-`config.py` 中的主要参数：
+主要配置位于 `config.py` 和 `.env`：
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `LLM_MODEL` | `glm-4-plus` | 使用的大模型，可选 `glm-4-plus` / `glm-4-air` / `glm-4-flash` / `glm-4.6` |
-| `GLM_BASE_URL` | 智谱 OpenAI 兼容接口 | 切换其他国产模型只需改这里 |
-| `LOCAL_DOCS_DIR` | `../4gaboards_doc/4gaboards` | 本地 Markdown 文档根目录 |
-| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | 本地嵌入模型，首次运行自动下载 |
-| `HEADLESS` | `True` | 改为 `False` 可在调试时看到浏览器窗口 |
-| `MAX_STEPS_PER_SCENARIO` | `20` | 每个场景最多执行步数 |
-| `CHUNK_SIZE` | `600` | 文档分块大小，影响 RAG 精度 |
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `DEEPSEEK_API_KEY` | `your-deepseek-api-key` | 大模型 API Key |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | OpenAI 兼容接口地址 |
+| `LLM_MODEL` | `deepseek-chat` | 默认模型 |
+| `TARGET_APP_URL` | `https://demo.4gaboards.com` | 被测应用 |
+| `DEMO_USERNAME` | `demo@demo.demo` | 4ga Boards demo 账号 |
+| `DEMO_PASSWORD` | `demo` | 4ga Boards demo 密码 |
+| `LOCAL_DOCS_DIR` | `4gaboards_doc/4gaboards` | 本地 Markdown 文档目录 |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | 本地 embedding 模型 |
+| `HEADLESS` | `True` | 是否使用无头浏览器 |
 
----
+## 测试数据说明
 
-## 注意事项
+`test_data/` 目录存放浏览器上传测试所需夹具：
 
-- 首次运行会自动下载嵌入模型（约 90MB），需要网络连接
-- 必须先准备好本地 `4gaboards_doc/` 文档目录，否则只能用网络爬取（内容残缺）
-- `data/` 和 `reports/` 目录由程序自动创建
-- 截图保存在 `reports/screenshots/`，测试报告保存在 `reports/`
-- demo.4gaboards.com 的演示账号：`demo@demo.demo` / `demo`
-- demo 站点是公开共享的，执行测试会产生项目/看板，不影响他人
+- `4gaboards_export.tgz`：用于 4ga Boards 导入看板场景，已准备。
+- `trello_export.json`：用于 Trello 导入场景，当前未包含，需要从真实 Trello 看板导出。
 
----
+如果缺少 `trello_export.json`，对应 Trello 导入场景不建议作为最终验收场景。
 
-## 数据存储位置（多模态知识底座对照）
+## GitHub 上传注意事项
 
-| PPT 承诺的存储 | 实际位置 | 是否入库（.gitignore）|
-|---|---|---|
-| **Qdrant 向量库** | `data/vector_store/qdrant/`（嵌入式模式，无需 Docker）| ❌ 忽略（运行时生成）|
-| **Neo4j 图数据库** | `data/neo4j_data/` + `data/neo4j_logs/`（Docker 挂载）| ❌ 忽略（约 500MB）|
-| **Neo4j 兜底（无 Docker 时）** | `data/knowledge_graph.json`（networkx） | ❌ 忽略 |
-| **键值存储**（任务配置 / 缓存 / 中间结果）| `data/.cfg.json` / `data/crawled_docs.json` / `data/features.json` / `data/test_scenarios.json` | ✅ 入库（除 .cfg.json 含 API key）|
+上传前请确认不要提交敏感信息和运行时大文件：
 
-```
-data/
-├── .cfg.json                  ← UI 配置（含 API key，忽略）
-├── crawled_docs.json          ← 15 个 Markdown 解析后原文
-├── features.json              ← 提取的功能点（任务一产物）
-├── test_scenarios.json        ← 生成的测试场景（任务一产物）
-├── knowledge_graph.json       ← networkx 兜底图谱（忽略）
-├── vector_store/              ← Qdrant 向量库 + chunks.pkl（忽略）
-└── neo4j_data/                ← Neo4j 数据（Docker 挂载，忽略）
+- 不要提交 `.env`，里面可能包含真实 API Key。
+- 不要提交 `data/.cfg.json`，Streamlit 会把界面配置缓存到这里。
+- 不要提交 `data/vector_store/`、`data/neo4j_data/`、大量截图和运行报告。
+- 当前 `.gitignore` 已经包含上述规则，提交前仍建议运行：
+
+```bash
+git status
 ```
 
-> 组员 clone 后只需 Tab 1 重新生成一次，即可同时填充 Qdrant 和 Neo4j。
+如果已经误提交过 API Key，需要立即在平台上作废该 Key 并重新生成。
+
+## 常见问题
+
+### 1. Playwright 找不到浏览器
+
+运行：
+
+```bash
+playwright install chromium
+```
+
+### 2. 首次构建 RAG 很慢
+
+首次运行会下载 embedding 模型并构建 Qdrant 向量索引。完成后索引会缓存在 `data/vector_store/`，下次可直接复用。
+
+### 3. Neo4j 没启动会不会影响主流程
+
+不会。Neo4j 不可用时会自动使用 networkx 兜底，场景生成和测试执行仍可运行。
+
+### 4. Demo 站点语言变了导致按钮找不到
+
+项目会尽量把 demo 账号语言固定为英文，并使用 DOM 快照和页面感知 Resolver 降低影响。若仍失败，可以重新运行：
+
+```bash
+python3 -m task1_rag.dom_snapshot
+```
+
+再重新生成场景。
+
+## 当前状态
+
+- 已完成成员 A 的场景生成质量修复。
+- 当前基线：25 个功能点、54 个测试场景。
+- 已验证 4ga Boards 导入场景 `f012_s02` 可执行通过。
+- Trello 导入场景依赖 `test_data/trello_export.json`，需额外准备真实导出文件。
+
+## License
+
+本项目用于课程大作业和学习研究。若要公开发布或二次使用，请根据课程要求和依赖库协议补充许可证说明。
