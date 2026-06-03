@@ -14,7 +14,7 @@ from typing import Any
 
 @dataclass
 class ActionRecord:
-    step_index:      int
+    step_index:      int | str
     action:          str
     target:          str
     value:           str

@@ -4,12 +4,45 @@ task2_agent/executor.py
 封装 navigate / click / input / wait / screenshot 等基础动作
 """
 
+import functools
+import platform
 import time
 from pathlib import Path
 from datetime import datetime
 from rich.console import Console
 
 console = Console(legacy_windows=False)
+
+
+def retry(max_attempts: int = 2, delay: float = 0.5):
+    """轻量重试装饰器：包裹短暂渲染波动导致的失败（click/input/upload）"""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            last_error = None
+            for attempt in range(max_attempts):
+                try:
+                    result = func(self, *args, **kwargs)
+                    if result:
+                        return result
+                    if attempt < max_attempts - 1:
+                        time.sleep(delay)
+                        console.print(
+                            f"[yellow]{func.__name__} 第 {attempt+1} 次返回 False，重试...[/yellow]"
+                        )
+                    last_error = Exception(f"{func.__name__} 返回 False")
+                except Exception as e:
+                    last_error = e
+                    if attempt < max_attempts - 1:
+                        time.sleep(delay)
+                        console.print(
+                            f"[yellow]{func.__name__} 第 {attempt+1} 次异常: {e}，重试...[/yellow]"
+                        )
+            if last_error:
+                raise last_error
+            return False
+        return wrapper
+    return decorator
 
 
 class BrowserExecutor:
@@ -30,6 +63,14 @@ class BrowserExecutor:
         self._browser    = None
         self._context    = None
         self._page       = None
+
+    @staticmethod
+    def _shortcut(key: str) -> str:
+        """返回当前平台快捷键。macOS → Meta+key，其他 → Control+key"""
+        normalized = key.lower()
+        if platform.system() == "Darwin":
+            return f"Meta+{normalized}"
+        return f"Control+{normalized}"
 
     # ── 生命周期 ──────────────────────────────────────────────────────────────
 
@@ -102,23 +143,29 @@ class BrowserExecutor:
                     console.print(f"[red]导航失败 {url}: {e}[/red]")
         return False
 
+    def _click_and_wait(self, element, timeout: int = 1500):
+        """点击后智能等待：domcontentloaded（快） + 800ms 渲染缓冲，替代 networkidle"""
+        element.scroll_into_view_if_needed()
+        element.click()
+        try:
+            self._page.wait_for_load_state("domcontentloaded", timeout=timeout)
+        except Exception:
+            pass
+        self._page.wait_for_timeout(800)
+
+    @retry(max_attempts=2, delay=0.5)
     def click(self, selector: str) -> bool:
         """点击元素（支持 CSS / 文本 / aria-label 多策略查找）"""
         try:
             el = self._find(selector)
             if el:
-                el.scroll_into_view_if_needed()
-                el.click()
-                # 等待网络稳定，忽略超时（有些操作不会触发请求）
-                try:
-                    self._page.wait_for_load_state("networkidle", timeout=3000)
-                except Exception:
-                    pass
+                self._click_and_wait(el)
                 return True
         except Exception as e:
             console.print(f"[yellow]点击失败 '{selector}': {e}[/yellow]")
         return False
 
+    @retry(max_attempts=2, delay=0.5)
     def input_text(self, selector: str, text: str) -> bool:
         """清空后输入文本。兼容 <input>/<textarea> 与 contenteditable div（4ga Boards 卡片标题用后者）。"""
         try:
@@ -138,7 +185,7 @@ class BrowserExecutor:
                 el.scroll_into_view_if_needed()
                 el.click()
                 # 全选已有内容并删除
-                self._page.keyboard.press("Control+A")
+                self._page.keyboard.press(self._shortcut("a"))
                 self._page.keyboard.press("Delete")
                 self._page.keyboard.type(text)
                 return True
@@ -155,6 +202,7 @@ class BrowserExecutor:
                 console.print(f"[yellow]输入失败 '{selector}': {e}[/yellow]")
         return False
 
+    @retry(max_attempts=2, delay=0.5)
     def set_input_files(self, selector: str, file_path: str) -> bool:
         """上传文件。支持直接设置 file input，也支持点击按钮触发 file chooser。"""
         try:
@@ -361,15 +409,17 @@ class BrowserExecutor:
     # ── 截图 ──────────────────────────────────────────────────────────────────
 
     def screenshot(self, name: str = None) -> str:
-        """截图保存到 screenshot_dir，返回文件路径"""
+        """安全截图：浏览器已关闭或页面不可用时静默返回空字符串"""
         try:
+            if not self._page or self._page.is_closed():
+                return ""
             if not name:
                 name = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
             path = self.screenshot_dir / f"{name}.png"
-            self._page.screenshot(path=str(path))
+            self._page.screenshot(path=str(path), timeout=3000)
             return str(path)
         except Exception as e:
-            console.print(f"[yellow]截图失败: {e}[/yellow]")
+            console.print(f"[dim]截图失败（可忽略）: {e}[/dim]")
             return ""
 
     # ── 导航辅助：进入项目 / 打开看板 ──────────────────────────────────────────
@@ -716,6 +766,8 @@ class BrowserExecutor:
 
             elif action in ("wait", "sleep"):
                 secs = float(value) if value else 2.0
+                if secs >= 3:
+                    console.print(f"  [dim]等待 {secs:.0f} 秒...（非卡死，请耐心等待）[/dim]")
                 self.sleep(secs)
                 success = True
 
@@ -743,75 +795,105 @@ class BrowserExecutor:
 
     # ── 私有：多策略元素查找 ──────────────────────────────────────────────────
 
-    def _find(self, selector: str, timeout: int = None):
-        """
-        多策略元素查找。返回第一个可见的 ElementHandle，找不到返回 None。
+    def _locate_visible_css(self, scope, selector: str, timeout: int):
+        """在所有匹配 CSS 选择器的元素中，返回第一个可见的。避免旧版本
+        wait_for_selector(state='visible')→新版本 element_handle() 的可见性检查缺失。"""
+        try:
+            loc = scope.locator(selector)
+            cnt = min(loc.count(), 30)
+            for i in range(cnt):
+                el = loc.nth(i)
+                try:
+                    if el.is_visible():
+                        return el.element_handle(timeout=timeout)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return None
 
-        关键优化：当页面有打开的对话框/弹窗时，**优先**在弹窗作用域内查找，
-        避免 "Add Project" 这种侧边栏链接和对话框提交按钮文字相同时的误点。
-        """
-        t = timeout or min(self.timeout, 4000)
-        page = self._page
-
-        # CSS selector 的常见特征：包含 [ . # > 或以 input/button/div 等开头
-        looks_like_css = any(c in selector for c in "[].#>:") or selector.startswith(
-            ("input", "button", "div", "span", "a[", "form")
-        )
-
-        # 检测当前是否有可见的对话框/弹窗（优先查找作用域）
+    def _visible_dialog_or_page(self):
+        """返回可见弹窗的 Locator，若无弹窗则返回 page。用于消歧同名按钮。"""
         DIALOG_SEL = (
             "[role='dialog'], [role='alertdialog'], dialog, "
             "[class*='Popup' i], [class*='Modal' i], [class*='Dialog' i]"
         )
-        scope_loc = None
         try:
-            loc = page.locator(DIALOG_SEL)
+            loc = self._page.locator(DIALOG_SEL)
             for i in range(min(loc.count(), 5)):
                 el = loc.nth(i)
                 try:
                     if el.is_visible(timeout=300):
-                        scope_loc = el
-                        break
+                        return el
                 except Exception:
                     continue
         except Exception:
-            scope_loc = None
+            pass
+        return self._page
 
-        strategies = []
+    def _find(self, selector: str, timeout: int = None):
+        """
+        多策略元素查找（分层 + deadline 控制）。
+        - 快速层 timeout: 150-250ms（精确匹配优先）
+        - 慢速层 timeout: 500-800ms（模糊匹配兜底）
+        - 全函数受 deadline 控制（默认 5s），避免坏 selector 拖垮全量执行。
+        - 有弹窗时优先在弹窗内查找（保留原有消歧逻辑）。
+        """
+        deadline = time.time() + (timeout or min(self.timeout, 5000)) / 1000
+        page = self._page
+        scope = self._visible_dialog_or_page()
+        in_dialog = scope is not page
 
-        # ── 第一优先：作用域内查找（有对话框时）────────────────────────────
-        if scope_loc is not None:
-            if looks_like_css:
-                strategies.append(lambda: scope_loc.locator(selector).first.element_handle(timeout=1500))
-            strategies.extend([
-                lambda: scope_loc.get_by_role("button", name=selector).first.element_handle(timeout=1500),
-                lambda: scope_loc.get_by_role("link",   name=selector).first.element_handle(timeout=1500),
-                lambda: scope_loc.locator(f"button:has-text('{selector}')").first.element_handle(timeout=1200),
-                lambda: scope_loc.get_by_text(selector, exact=False).first.element_handle(timeout=1200),
-                # 模态框里"提交"类按钮的兜底
-                lambda: scope_loc.locator("button[type='submit']").first.element_handle(timeout=800),
-            ])
+        looks_like_css = any(c in selector for c in "[].#>:") or selector.startswith(
+            ("input", "button", "div", "span", "a[", "form")
+        )
 
-        # ── 第二优先：全页面 CSS / 文本查找 ─────────────────────────────────
+        # ── 快速层（精确匹配，150-250ms）─────────────────────────────────
+        fast_strategies = []
         if looks_like_css:
-            strategies.append(lambda: page.wait_for_selector(selector, timeout=t))
-
-        strategies.extend([
-            lambda: page.get_by_role("button", name=selector).first.element_handle(timeout=1500),
-            lambda: page.get_by_role("link",   name=selector).first.element_handle(timeout=1500),
-            lambda: page.get_by_role("menuitem", name=selector).first.element_handle(timeout=1200),
-            lambda: page.locator(f"button:has-text('{selector}')").first.element_handle(timeout=1200),
-            lambda: page.locator(f"a:has-text('{selector}')").first.element_handle(timeout=1200),
-            lambda: page.locator(f"[aria-label='{selector}' i]").first.element_handle(timeout=1200),
-            lambda: page.locator(f"[placeholder*='{selector}' i]").first.element_handle(timeout=1200),
-            lambda: page.locator(f"[title='{selector}' i]").first.element_handle(timeout=1200),
-            lambda: page.get_by_text(selector, exact=False).first.element_handle(timeout=1500),
+            fast_strategies.append(lambda: self._locate_visible_css(scope, selector, 250))
+        fast_strategies.extend([
+            lambda: scope.get_by_role("button", name=selector).first.element_handle(timeout=250),
+            lambda: scope.get_by_role("link", name=selector).first.element_handle(timeout=250),
+            lambda: scope.get_by_role("menuitem", name=selector).first.element_handle(timeout=250),
+            lambda: scope.get_by_placeholder(selector).first.element_handle(timeout=250),
         ])
 
-        if not looks_like_css:
-            strategies.append(lambda: page.wait_for_selector(selector, timeout=2000))
+        # ── 慢速层（模糊匹配，500-800ms）─────────────────────────────────
+        slow_strategies = []
+        # CSS selector 兜底（用更长的 timeout 再试一次）
+        if looks_like_css:
+            slow_strategies.append(lambda: self._locate_visible_css(scope, selector, 800))
+        slow_strategies.extend([
+            lambda: scope.get_by_role("button", name=selector).first.element_handle(timeout=600),
+            lambda: scope.get_by_role("link", name=selector).first.element_handle(timeout=600),
+            lambda: scope.get_by_role("menuitem", name=selector).first.element_handle(timeout=600),
+            lambda: scope.locator("button:has-text('" + selector + "')").first.element_handle(timeout=600),
+            lambda: scope.locator("a:has-text('" + selector + "')").first.element_handle(timeout=600),
+            lambda: scope.get_by_text(selector, exact=False).first.element_handle(timeout=800),
+        ])
 
-        for strategy in strategies:
+        # 对话框内的兜底（submit 类按钮）
+        if in_dialog:
+            slow_strategies.append(
+                lambda: scope.locator("button[type='submit']").first.element_handle(timeout=600)
+            )
+
+        # 非弹窗时才做全页面兜底（避免弹窗外同名按钮干扰）
+        if not in_dialog:
+            slow_strategies.extend([
+                lambda: page.get_by_role("button", name=selector).first.element_handle(timeout=600),
+                lambda: page.get_by_role("link", name=selector).first.element_handle(timeout=600),
+                lambda: page.get_by_role("menuitem", name=selector).first.element_handle(timeout=600),
+                lambda: page.locator("[aria-label='" + selector + "' i]").first.element_handle(timeout=600),
+                lambda: page.locator("[placeholder*='" + selector + "' i]").first.element_handle(timeout=600),
+                lambda: page.locator("[title='" + selector + "' i]").first.element_handle(timeout=600),
+                lambda: page.get_by_text(selector, exact=False).first.element_handle(timeout=800),
+            ])
+
+        for strategy in fast_strategies + slow_strategies:
+            if time.time() > deadline:
+                break
             try:
                 el = strategy()
                 if el:
