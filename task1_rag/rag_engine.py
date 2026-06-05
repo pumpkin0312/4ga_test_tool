@@ -18,15 +18,47 @@ console = Console(legacy_windows=False)
 
 def chunk_text(text: str, chunk_size: int = 600, overlap: int = 80) -> list[str]:
     """将长文本切分成带重叠的小块"""
+    if not text or not text.strip():
+        return []
     if len(text) <= chunk_size:
         return [text]
+
+    # 防御：确保 overlap < chunk_size，否则死循环（Bug-8）
+    overlap = min(overlap, chunk_size - 1)
+    step = chunk_size - overlap
+    assert step > 0, f"step must be positive, got chunk_size={chunk_size}, overlap={overlap}"
+
     chunks = []
     start = 0
     while start < len(text):
         end = start + chunk_size
         chunks.append(text[start:end])
-        start += chunk_size - overlap
+        start += step
     return chunks
+
+
+def chunk_by_sections(text: str, max_chunk_size: int = 800, overlap: int = 80) -> list[str]:
+    """按 markdown 标题分块，保留语义完整性；超长 section 回退到 chunk_text()（Bug-7）"""
+    import re
+    sections = re.split(r'\n(?=#{1,3}\s)', text)
+    chunks: list[str] = []
+    current = ""
+    for section in sections:
+        if len(current) + len(section) > max_chunk_size and current:
+            chunks.append(current.strip())
+            current = section
+        else:
+            current += "\n" + section
+    if current.strip():
+        chunks.append(current.strip())
+
+    final_chunks: list[str] = []
+    for chunk in chunks:
+        if len(chunk) > max_chunk_size:
+            final_chunks.extend(chunk_text(chunk, max_chunk_size, overlap))
+        else:
+            final_chunks.append(chunk)
+    return final_chunks
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -98,11 +130,11 @@ class RAGEngine:
         """从文档页面列表构建向量索引"""
         console.print("[cyan]开始构建向量索引...[/cyan]")
 
-        # 1. 分块
+        # 1. 分块（Bug-7: 优先按 markdown 标题分块，保留语义完整性）
         self._chunks = []
         for page in pages:
             full_text = f"{page.get('title', '')}\n{page.get('content', '')}"
-            for chunk in chunk_text(full_text, self.chunk_size, self.chunk_overlap):
+            for chunk in chunk_by_sections(full_text, self.chunk_size, self.chunk_overlap):
                 if len(chunk.strip()) > 30:
                     self._chunks.append({
                         "text":         chunk.strip(),
@@ -251,14 +283,56 @@ class RAGEngine:
                 results.append(chunk)
         return results
 
+    def search(self, query: str, top_k: int = 5) -> list[tuple[str, float, dict]]:
+        """返回原始 (text, score, meta) 元组，供上层做 chunk 级去重（Bug-11）"""
+        results = self.retrieve(query, top_k=top_k)
+        return [
+            (
+                item.get("text", ""),
+                float(item.get("score", 0.0)),
+                {
+                    "source_title": item.get("source_title", ""),
+                    "source_url": item.get("source_url", ""),
+                    "category": item.get("category", ""),
+                },
+            )
+            for item in results
+        ]
+
     def get_context(self, query: str, top_k: int = 5) -> str:
-        """检索结果拼接成上下文字符串供 LLM 使用"""
-        chunks = self.retrieve(query, top_k)
-        if not chunks:
+        """检索结果拼接成上下文字符串供 LLM 使用；中英双语查询扩展 + 去重排序（Bug-7）"""
+        # 中文查询 + 英文翻译查询，合并结果
+        EN_MAP = {
+            "创建": "create", "项目": "project", "看板": "board",
+            "卡片": "card", "删除": "delete", "列表": "list",
+            "编辑": "edit", "移动": "move", "导入": "import",
+            "管理": "manage", "设置": "settings", "通知": "notification",
+            "用户": "user", "登录": "login", "登出": "logout",
+            "注册": "register", "密码": "password", "附件": "attachment",
+            "评论": "comment", "标签": "label", "成员": "member",
+        }
+        en_query = query
+        for cn, en in EN_MAP.items():
+            en_query = en_query.replace(cn, en)
+
+        cn_results = self.search(query, top_k=top_k)
+        en_results = self.search(en_query, top_k=top_k) if en_query != query else []
+
+        # 合并去重（按 chunk 文本 hash），按 score 降序
+        seen: set[int] = set()
+        merged: list[tuple[str, float, dict]] = []
+        for text, score, meta in cn_results + en_results:
+            h = hash(text.strip())
+            if h not in seen:
+                seen.add(h)
+                merged.append((text, score, meta))
+        merged.sort(key=lambda x: x[1], reverse=True)
+
+        if not merged:
             return ""
         return "\n\n---\n\n".join(
-            f"[参考片段 {i + 1} | 来源: {c['source_title']}]\n{c['text']}"
-            for i, c in enumerate(chunks)
+            f"[参考片段 {i + 1} | 来源: {meta['source_title']}]\n{text}"
+            for i, (text, _score, meta) in enumerate(merged[:top_k])
         )
 
 

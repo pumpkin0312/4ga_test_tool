@@ -34,7 +34,8 @@ BROWSER_LOCALE      = os.getenv("BROWSER_LOCALE", "en-US")
 TARGET_APP_LANGUAGE = os.getenv("TARGET_APP_LANGUAGE", "en")
 
 # ── RAG 设置 ───────────────────────────────────────────────
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"   # 本地嵌入模型，无需额外 API
+# 中英双语嵌入模型（Bug-12）；若本机下载慢 / 内存不足可临时退回 "all-MiniLM-L6-v2"
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
 CHUNK_SIZE      = 600                    # 每个文本块字符数
 CHUNK_OVERLAP   = 80                     # 相邻块重叠字符数
 TOP_K_RETRIEVAL = 5                      # RAG 检索返回的块数量
