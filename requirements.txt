@@ -22,6 +22,9 @@ lxml>=5.2.0
 # Browser automation
 playwright>=1.44.0
 
+# JSON repair (Bug-2/15: 修复 LLM 输出破损 JSON)
+json-repair>=0.30.0
+
 # Data models and utilities
 pydantic>=2.7.0
 python-dotenv>=1.0.0

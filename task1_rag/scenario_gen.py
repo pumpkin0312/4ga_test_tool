@@ -239,13 +239,14 @@ URL: https://demo.4gaboards.com
 # ══════════════════════════════════════════════════════════════════════════════
 
 def parse_json(text: str) -> list:
-    """从 LLM 返回文本中安全提取 JSON 数组"""
+    """从 LLM 返回文本中安全提取 JSON 数组，带多级修复（Bug-2/Bug-15）"""
     if not text or not text.strip():
         console.print("[red]LLM 返回为空（可能是思考型模型 max_tokens 不足或网络异常）[/red]")
         return []
 
     raw = text
-    # 优先提取 ```json ... ``` 代码块
+
+    # 第 1 级：提取 markdown ```json ... ``` 代码块
     match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
     if match:
         text = match.group(1)
@@ -256,22 +257,38 @@ def parse_json(text: str) -> list:
         if start >= 0 and end > 0:
             text = text[start:end]
 
+    # 第 2 级：直接解析
     try:
         return json.loads(text)
-    except json.JSONDecodeError as e:
-        console.print(f"[red]JSON 解析失败: {e}[/red]")
-        console.print(f"[dim]原始返回前 500 字: {raw[:500]}[/dim]")
-        # 尝试修复被截断的 JSON：截到最后一个完整的 } 后补 ]
-        last_obj_end = text.rfind("}")
-        if last_obj_end > 0:
-            patched = text[:last_obj_end + 1].rstrip().rstrip(",") + "\n]"
+    except json.JSONDecodeError:
+        pass
+
+    # 第 3 级：用 json_repair 库修复（支持嵌套结构、未闭合字符串等）
+    try:
+        from json_repair import repair_json
+        repaired = repair_json(text, return_objects=True)
+        if isinstance(repaired, list):
+            console.print(f"[yellow]JSON 已通过 json_repair 修复，恢复 {len(repaired)} 项[/yellow]")
+            return repaired
+        if isinstance(repaired, dict):
+            return [repaired]
+    except Exception:
+        pass
+
+    # 第 4 级：手动截断修复（从后往前逐 } 尝试截断并补 ]）
+    for i in range(len(text) - 1, 0, -1):
+        if text[i] == '}':
+            candidate = text[:i + 1].rstrip().rstrip(",") + "\n]"
             try:
-                fixed = json.loads(patched)
-                console.print(f"[yellow]已自动修复截断的 JSON，恢复 {len(fixed)} 项[/yellow]")
-                return fixed
-            except Exception:
-                pass
-        return []
+                result = json.loads(candidate)
+                console.print(f"[yellow]截断修复成功，恢复 {len(result)} 项[/yellow]")
+                return result
+            except json.JSONDecodeError:
+                continue
+
+    console.print(f"[red]JSON 解析彻底失败[/red]")
+    console.print(f"[dim]原始返回前 500 字: {raw[:500]}[/dim]")
+    return []
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -753,13 +770,18 @@ class ScenarioGenerator:
                 "settings preferences notifications profile sidebar",
                 "import export project board",
             ]
-            seen = set()
+            seen_chunks: set[int] = set()
             parts = []
             for q in queries:
-                ctx = self.rag.get_context(q, top_k=3)
-                if ctx and ctx not in seen:
-                    parts.append(ctx)
-                    seen.add(ctx)
+                for chunk_text_val, _score, meta in self.rag.search(q, top_k=4):
+                    # Bug-11: chunk 级去重，避免同一片段在不同 query 中被重复计入
+                    normalized = " ".join(chunk_text_val.split())
+                    chunk_hash = hash(normalized)
+                    if chunk_hash in seen_chunks:
+                        continue
+                    seen_chunks.add(chunk_hash)
+                    title = meta.get("source_title", "")
+                    parts.append(f"[来源: {title}]\n{chunk_text_val}")
             context = "\n\n---\n\n".join(parts)
         elif pages:
             parts, total = [], 0
@@ -872,6 +894,24 @@ class ScenarioGenerator:
                 console.print(f"  [red]✗[/red] {feature.name}: {e}")
 
         all_scenarios = self._dedup_scenarios(all_scenarios)
+
+        # Bug-3 / Bug-10: 数量守护 — 低于 A 版本基线时补充空场景功能点
+        if len(features) < 23 or len(all_scenarios) < 50:
+            console.print(
+                f"[yellow]⚠ 功能点/场景数量低于 A 版本验收线："
+                f"{len(features)} features, {len(all_scenarios)} scenarios，"
+                f"尝试对空场景功能点重新生成...[/yellow]"
+            )
+            for feature in features:
+                if not feature.scenarios:
+                    retried = self.generate_scenarios(feature, max_retries=3)
+                    if retried:
+                        feature.scenarios = retried
+                        all_scenarios.extend(retried)
+                        console.print(
+                            f"  [yellow]↻ 补充 {feature.name}（{len(retried)} 个场景）[/yellow]"
+                        )
+            all_scenarios = self._dedup_scenarios(all_scenarios)
 
         # 3. 保存 JSON
         with open(features_path, "w", encoding="utf-8") as f:
