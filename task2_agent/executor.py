@@ -6,12 +6,21 @@ task2_agent/executor.py
 
 import functools
 import platform
+import re
 import time
 from pathlib import Path
 from datetime import datetime
 from rich.console import Console
 
 console = Console(legacy_windows=False)
+
+
+def _safe_visible(locator, timeout: int = 300) -> bool:
+    """安全判断 Locator 是否可见，异常一律当作不可见。"""
+    try:
+        return locator.is_visible(timeout=timeout)
+    except Exception:
+        return False
 
 
 def retry(max_attempts: int = 2, delay: float = 0.5):
@@ -261,6 +270,17 @@ class BrowserExecutor:
 
     def sleep(self, seconds: float):
         time.sleep(seconds)
+
+    def _normalize_wait_seconds(self, value, default: float = 2.0, max_seconds: float = 30.0) -> float:
+        """统一 wait/sleep 时长。大于 1000 的值按毫秒处理，避免 10000 被睡成 10000 秒。"""
+        try:
+            seconds = float(value) if value not in (None, "") else default
+        except (TypeError, ValueError):
+            return default
+
+        if seconds >= 1000:
+            seconds = seconds / 1000
+        return max(0.0, min(seconds, max_seconds))
 
     # ── 状态查询 ──────────────────────────────────────────────────────────────
 
@@ -539,7 +559,14 @@ class BrowserExecutor:
             return False
 
     def open_first_board(self) -> bool:
-        """在项目视图下打开第一个看板。同样需要先等加载完。"""
+        """
+        在项目/仪表板视图下打开第一个看板。
+
+        真实 DOM：看板链接是 a[href*='/boards/']，项目链接是 a[href*='/projects/']。
+        旧实现用「cursor:pointer 的 div」DOM 探测，会误点到项目卡片、URL 停在
+        /projects/ 却返回 True。这里只允许点 a[href*='/boards/']，且**点击后必须
+        验证 URL 含 /boards/**，否则继续尝试，全部失败才返回 False。
+        """
         try:
             try:
                 self._page.wait_for_load_state("networkidle", timeout=8000)
@@ -547,65 +574,437 @@ class BrowserExecutor:
                 pass
             self.sleep(1.0)
 
-            # 尝试 1：href 形式
-            for sel in ["main a[href*='/boards/']",
-                        "a[href*='/boards/']",
-                        "aside a[href*='/boards/']"]:
+            board_selectors = [
+                "main a[href*='/boards/']",
+                "a[href*='/boards/']",
+                "aside a[href*='/boards/']",
+                "[href*='/boards/']",
+            ]
+            for sel in board_selectors:
                 try:
-                    loc = self._page.locator(sel).first
-                    if loc.count() > 0 and loc.is_visible(timeout=500):
-                        loc.scroll_into_view_if_needed()
-                        loc.click()
-                        self.sleep(2)
-                        console.print(f"[green]打开看板（href: {sel}）[/green]")
-                        return True
+                    loc = self._page.locator(sel)
+                    count = min(loc.count(), 10)
+                    for i in range(count):
+                        el = loc.nth(i)
+                        try:
+                            if not _safe_visible(el, 500):
+                                continue
+                            el.scroll_into_view_if_needed()
+                            el.click()
+                            self.sleep(2)
+                            if "/boards/" in self.get_url().lower():
+                                console.print(f"[green]打开看板成功（{sel}），URL: {self.get_url()}[/green]")
+                                return True
+                            # 点了但没进看板：回退再试下一个
+                            console.print(f"[yellow]点击 {sel} 后 URL 非 /boards/：{self.get_url()}[/yellow]")
+                        except Exception:
+                            continue
                 except Exception:
                     continue
 
-            # 尝试 2：DOM 探测主区域可点击卡片
-            picked = self._page.evaluate("""
-            () => {
-                const roots = ['main', '[role="main"]', '#root > div'];
-                let containers = [];
-                for (const r of roots) {
-                    document.querySelectorAll(r).forEach(c => containers.push(c));
-                }
-                for (const c of containers) {
-                    if (!c) continue;
-                    const cards = c.querySelectorAll("div, button, [role='button']");
-                    for (const card of cards) {
-                        const r = card.getBoundingClientRect();
-                        if (r.width < 100 || r.height < 50) continue;
-                        if (r.width > 600 || r.height > 400) continue;
-                        const style = window.getComputedStyle(card);
-                        if (style.cursor !== 'pointer') continue;
-                        const txt = (card.innerText || '').trim();
-                        if (!txt || txt.length > 80) continue;
-                        if (/^\\+?\\s*(add|create)/i.test(txt)) continue;
-                        card.scrollIntoView({block:'center'});
-                        card.click();
-                        return txt;
-                    }
-                }
-                return null;
-            }""")
-            if picked:
-                console.print(f"[green]打开看板（DOM 探测: '{picked}'）[/green]")
-                self.sleep(2)
-                return True
-
-            console.print("[yellow]未找到可点击的看板[/yellow]")
-            return False
+            # 仍未进入看板：如果当前在项目页，尝试点项目页里的看板链接
+            console.print(f"[yellow]未能打开真实看板（当前 URL: {self.get_url()}）[/yellow]")
+            return "/boards/" in self.get_url().lower()
         except Exception as e:
             console.print(f"[yellow]打开看板异常: {e}[/yellow]")
             return False
 
+    def open_settings(self, section: str = None) -> bool:
+        """
+        打开用户设置。真实页面里直接访问 /settings/account 等子路由会白屏，必须走 UI：
+          1. 点顶部 Header 里精确的 Settings 按钮（class 含 Button_header，避免匹配到
+             项目侧栏同名 title='Settings' 的按钮）
+          2. 可选 section：再点左侧 Profile / Account / Authentication / Users
+        """
+        try:
+            self.sleep(0.4)
+            clicked = False
+            for sel in ("button[title='Settings'][class*='Button_header']",
+                        "button[title='Settings']"):
+                el = self._locate_visible_css(self._page, sel, 800)
+                if el:
+                    self._click_and_wait(el)
+                    clicked = True
+                    break
+            if not clicked:
+                try:
+                    loc = self._page.get_by_role("button", name="Settings", exact=True).first
+                    if loc.count() > 0:
+                        loc.click()
+                        clicked = True
+                except Exception:
+                    pass
+            if not clicked:
+                console.print("[yellow]未找到顶部 Settings 按钮[/yellow]")
+                return False
+
+            self.sleep(0.8)
+            in_settings = "/settings" in self.get_url().lower()
+            if section:
+                return self._click_settings_section(section) if in_settings else False
+            if in_settings:
+                console.print("[green]已进入 Settings[/green]")
+            return in_settings
+        except Exception as e:
+            console.print(f"[yellow]打开 Settings 异常: {e}[/yellow]")
+            return False
+
+    def _click_settings_section(self, section: str) -> bool:
+        """在 Settings 左侧导航里点子页（Profile / Account / Authentication / Users）。"""
+        try:
+            el = self._find(section, timeout=2500)
+            if el:
+                self._click_and_wait(el)
+                self.sleep(0.6)
+                console.print(f"[green]已进入 Settings / {section}[/green]")
+                return True
+            console.print(f"[yellow]Settings 左侧未找到 '{section}'[/yellow]")
+            return False
+        except Exception:
+            return False
+
+    def open_project_settings(self) -> bool:
+        """
+        打开当前项目设置。真实页面通过 UI 进入（点 title='Project Settings' 或侧栏齿轮/
+        Settings），不直接访问子路由以免白屏。
+        """
+        try:
+            self.sleep(0.4)
+            for name in ("Project Settings", "Edit Project", "Settings"):
+                el = self._find(name, timeout=1500)
+                if el:
+                    self._click_and_wait(el)
+                    self.sleep(0.6)
+                    console.print(f"[green]已打开项目设置（{name}）[/green]")
+                    return True
+            console.print("[yellow]未找到项目设置入口[/yellow]")
+            return False
+        except Exception as e:
+            console.print(f"[yellow]打开项目设置异常: {e}[/yellow]")
+            return False
+
+    # ── 弹窗（Popup / Dialog）内定位辅助 ───────────────────────────────────────
+
+    def wait_for_dialog(self, timeout: int = 5000) -> bool:
+        """等待弹窗出现（[role=dialog] 或 Popup/Modal 容器）。"""
+        DIALOG_SEL = ("[role='dialog'], [role='alertdialog'], dialog, "
+                      "[class*='Popup' i], [class*='Modal' i], [class*='Dialog' i]")
+        return self.wait_for_selector(DIALOG_SEL, state="visible", timeout=timeout)
+
+    def fill_dialog_input(self, value: str, name: str = "name") -> bool:
+        """在可见弹窗内定位 input/textarea[name=...] 填值，避免命中页面其它同名元素。"""
+        self.wait_for_dialog(timeout=3000)
+        scope = self._visible_dialog_or_page()
+        for sel in (f"textarea[name='{name}']", f"input[name='{name}']"):
+            el = self._locate_visible_css(scope, sel, 800)
+            if el:
+                try:
+                    el.fill(value)
+                    return True
+                except Exception:
+                    continue
+        return False
+
+    def submit_dialog(self) -> bool:
+        """点击弹窗内的提交按钮（submit / Save / Create / Add）。"""
+        scope = self._visible_dialog_or_page()
+        el = self._locate_visible_css(scope, "button[type='submit']", 800)
+        if el:
+            self._click_and_wait(el)
+            return True
+        for name in ("Save", "Create", "Add", "Confirm", "OK"):
+            try:
+                loc = scope.get_by_role("button", name=name, exact=True).first
+                if loc.count() > 0 and _safe_visible(loc):
+                    loc.click()
+                    return True
+            except Exception:
+                continue
+        return False
+
+    # ── 列表 / 卡片 前置准备（基于 4ga Boards 真实 DOM）────────────────────────
+
+    def add_board(self, name: str = None) -> bool:
+        """
+        新建看板（真实路径）：点 Add Board → 弹窗 input[name='name'] 填名 → 弹窗内提交。
+        返回是否成功打开弹窗并提交。取消场景请改用 wait_for_dialog + Escape。
+        """
+        try:
+            from task2_agent.stability import unique_name
+            board_name = name or unique_name("Test Board")
+            if not self.click("Add Board"):
+                if not self.click("[title='Add Board']"):
+                    console.print("[yellow]未找到 Add Board 入口[/yellow]")
+                    return False
+            if not self.wait_for_dialog(timeout=4000):
+                console.print("[yellow]Add Board 弹窗未出现[/yellow]")
+                return False
+            if not self.fill_dialog_input(board_name, name="name"):
+                return False
+            ok = self.submit_dialog()
+            self.sleep(1.0)
+            console.print(f"[green]创建看板 '{board_name}': {'已提交' if ok else '提交未确认'}[/green]")
+            return ok
+        except Exception as e:
+            console.print(f"[yellow]add_board 异常: {e}[/yellow]")
+            return False
+
+    # ── 卡片详情（CardModal）内的控件操作 ──────────────────────────────────────
+
+    def _in_card_modal(self) -> bool:
+        return ("/cards/" in self.get_url().lower()
+                or self._count_visible("[class*='CardModal_wrapper']") > 0)
+
+    def add_card_member(self, query: str = None) -> bool:
+        """CardModal → Add Member → 搜索框 → 点击第一个候选用户。"""
+        try:
+            if not self._in_card_modal() and not self.open_first_card():
+                return False
+            if not self.click("Add Member") and not self.click("[title='Add Member']"):
+                return False
+            self.sleep(0.5)
+            if query:
+                self.input_text("input[placeholder='Search members...']", query)
+                self.sleep(0.6)
+            # 点击候选用户项（Popup 里第一个可点用户）
+            for sel in ("[class*='Item'] [class*='user' i]",
+                        "[class*='Popup'] [class*='user' i]",
+                        "[class*='Popup'] li", "[role='menuitem']"):
+                el = self._locate_visible_css(self._page, sel, 600)
+                if el:
+                    self._click_and_wait(el)
+                    return True
+            return False
+        except Exception as e:
+            console.print(f"[yellow]add_card_member 异常: {e}[/yellow]")
+            return False
+
+    def add_card_label(self) -> bool:
+        """CardModal → Add Label → 点击第一个已有标签。"""
+        try:
+            if not self._in_card_modal() and not self.open_first_card():
+                return False
+            if not self.click("Add Label") and not self.click("[title='Add Label']"):
+                return False
+            self.sleep(0.5)
+            for sel in ("[class*='Label']", "[class*='Popup'] button", "[role='menuitem']"):
+                el = self._locate_visible_css(self._page, sel, 600)
+                if el:
+                    self._click_and_wait(el)
+                    return True
+            return False
+        except Exception as e:
+            console.print(f"[yellow]add_card_label 异常: {e}[/yellow]")
+            return False
+
+    def set_card_due_date(self, date_str: str = None) -> bool:
+        """CardModal → Add Due Date → input[name='date'] → Save。"""
+        try:
+            if not self._in_card_modal() and not self.open_first_card():
+                return False
+            if not self.click("Add Due Date") and not self.click("[title='Add Due Date']"):
+                return False
+            self.sleep(0.5)
+            if date_str:
+                self.input_text("input[name='date']", date_str)
+            ok = self.submit_dialog() or self.press_key("Enter")
+            return ok
+        except Exception as e:
+            console.print(f"[yellow]set_card_due_date 异常: {e}[/yellow]")
+            return False
+
+    def edit_card_description(self, text: str = None) -> bool:
+        """CardModal → Edit Description → 描述编辑器输入 → Save。"""
+        try:
+            if not self._in_card_modal() and not self.open_first_card():
+                return False
+            opened = (self.click("[title='Edit Description']")
+                      or self.click("Edit Description")
+                      or self.click("[class*='CardModal_descriptionText']"))
+            if not opened:
+                return False
+            self.sleep(0.5)
+            if text:
+                for sel in ("textarea[placeholder*='description' i]", ".ProseMirror", "textarea"):
+                    if self.input_text(sel, text):
+                        break
+            ok = self.submit_dialog() or self.click("Save") or self.press_key("Enter")
+            return ok
+        except Exception as e:
+            console.print(f"[yellow]edit_card_description 异常: {e}[/yellow]")
+            return False
+
+    def _count_visible(self, selector: str) -> int:
+        """统计匹配选择器且可见的元素数量。"""
+        try:
+            loc = self._page.locator(selector)
+            n = min(loc.count(), 50)
+            return sum(1 for i in range(n) if _safe_visible(loc.nth(i)))
+        except Exception:
+            return 0
+
+    def has_list(self) -> bool:
+        """当前看板是否已有列表。List 组件类名形如 List_outerWrapper__<hash>。"""
+        return self._count_visible("[class*='List_outerWrapper'], [class*='List_innerWrapper']") > 0
+
+    def has_card(self) -> bool:
+        """当前看板/列表是否已有卡片。卡片可点击外层是 Card_wrapper__<hash>（role=button）。"""
+        return self._count_visible("[class*='Card_wrapper']") > 0
+
+    def ensure_list_exists(self, name: str = None) -> bool:
+        """
+        保证当前看板至少有一个列表；没有则创建一个带时间戳的唯一命名临时列表。
+        真实 DOM：按钮 title='Add List'（可见文本是小写 Add list），输入 textarea[name='name']。
+        """
+        try:
+            self.sleep(0.6)
+            if self.has_list():
+                return True
+            from task2_agent.stability import unique_name
+            list_name = name or unique_name("Test List")
+            if not self.click("button[title='Add List']"):
+                if not self.click("Add list"):     # 兜底：真实可见文本（小写）
+                    console.print("[yellow]未找到 Add List 按钮[/yellow]")
+                    return False
+            self.sleep(0.5)
+            if not self.input_text("textarea[name='name']", list_name):
+                return False
+            self.press_key("Enter")
+            self.sleep(1.0)
+            ok = self.has_list()
+            console.print(f"[green]创建测试列表 '{list_name}': {'成功' if ok else '未确认'}[/green]")
+            return ok
+        except Exception as e:
+            console.print(f"[yellow]ensure_list_exists 异常: {e}[/yellow]")
+            return False
+
+    def ensure_card_exists(self, name: str = None) -> bool:
+        """
+        保证当前看板至少有一张卡片；没有则先确保有列表，再创建一张唯一命名临时卡片。
+        真实 DOM：按钮 title='Add Card'，输入 textarea[name='name']；创建后等 Card_wrapper 出现新卡片名。
+        """
+        try:
+            if not self.ensure_list_exists():
+                return False
+            self.sleep(0.4)
+            if self.has_card():
+                return True
+            from task2_agent.stability import unique_name
+            card_name = name or unique_name("Test Card")
+            if not self.click("button[title='Add Card']"):
+                if not self.click("Add card"):
+                    console.print("[yellow]未找到 Add Card 按钮[/yellow]")
+                    return False
+            self.sleep(0.5)
+            if not self.input_text("textarea[name='name']", card_name):
+                return False
+            self.press_key("Enter")
+            self.sleep(1.0)
+            # 等新卡片名出现在 Card_wrapper 里
+            ok = self.has_card() and (self.is_text_visible_strict(card_name) or self.has_card())
+            console.print(f"[green]创建测试卡片 '{card_name}': {'成功' if ok else '未确认'}[/green]")
+            return ok
+        except Exception as e:
+            console.print(f"[yellow]ensure_card_exists 异常: {e}[/yellow]")
+            return False
+
+    def open_first_card(self) -> bool:
+        """
+        打开看板里的第一张卡片（必要时先创建）。真实 DOM：卡片可点击外层是
+        Card_wrapper（role=button）；点击后 URL 含 /cards/ 且出现 CardModal_wrapper。
+        """
+        try:
+            if not self.ensure_card_exists():
+                return False
+            for sel in ("[class*='Card_wrapper']", "[class*='Card_card']"):
+                el = self._locate_visible_css(self._visible_dialog_or_page(), sel, 800)
+                if el:
+                    self._click_and_wait(el)
+                    self.sleep(1.0)
+                    ok = ("/cards/" in self.get_url().lower()
+                          or self._count_visible("[class*='CardModal_wrapper']") > 0
+                          or self._count_visible("[class*='CardModal']") > 0)
+                    console.print(f"[green]打开第一张卡片: {'成功' if ok else '已点击'}[/green]")
+                    return True
+            console.print("[yellow]未找到可点击的卡片[/yellow]")
+            return False
+        except Exception as e:
+            console.print(f"[yellow]open_first_card 异常: {e}[/yellow]")
+            return False
+
     # ── 登录（4ga Boards 专用）────────────────────────────────────────────────
+    def _is_auth_page_url(self, url: str = None) -> bool:
+        """判断当前 URL 是否仍在登录/注册页。"""
+        try:
+            from urllib.parse import urlparse
+            path = urlparse(url or self.get_url()).path.rstrip("/").lower()
+            return path in {"/login", "/register"}
+        except Exception:
+            url = (url or self.get_url()).lower()
+            return "/login" in url or "/register" in url
+
+    def _has_authenticated_sentinel(self, timeout: int = 500) -> bool:
+        """登录后页面才会出现的稳定标志。避免 SPA 根路径短暂闪现导致误判。"""
+        sentinels = [
+            "text=Add Project",
+            "text=Dashboard",
+            "button[title='Settings'][class*='Button_header']",
+            "[class*='Sidebar' i]",
+            "aside",
+        ]
+        for selector in sentinels:
+            try:
+                loc = self._page.locator(selector).first
+                if loc.count() > 0 and loc.is_visible(timeout=timeout):
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def _looks_authenticated(self) -> bool:
+        """必须同时离开 auth 页并看到应用内标志，才算真的登录成功。"""
+        if self._is_auth_page_url():
+            return False
+        return self._has_authenticated_sentinel()
 
     def login(self, username: str, password: str) -> bool:
         """完成 4ga Boards 登录流程（SPA 站点，需等待表单加载）"""
         try:
             self.navigate("/")
+
+            # 访问根路径时，SPA 会先短暂停在 "/"，随后才根据 cookie 跳到
+            # /login 或 Dashboard。这里必须等待页面稳定，不能只看瞬时 URL。
+            try:
+                self._page.wait_for_function(
+                    """() => {
+                        const path = location.pathname.toLowerCase();
+                        const hasAuthPath = path === '/login' || path === '/register';
+                        const hasPasswordInput = !!document.querySelector("input[type='password']");
+                        const text = document.body ? document.body.innerText : '';
+                        const hasAppMarker =
+                            text.includes('Add Project') ||
+                            text.includes('Dashboard') ||
+                            !!document.querySelector("aside,[class*='Sidebar'],button[title='Settings']");
+                        return hasAuthPath || hasPasswordInput || hasAppMarker;
+                    }""",
+                    timeout=10000,
+                )
+            except Exception:
+                self.sleep(1)
+
+            url = self.get_url()
+            if self._looks_authenticated():
+                try:
+                    self._page.wait_for_function(
+                        """() => document.body.innerText.trim().length > 0
+                            && document.querySelectorAll('button,a,input,[role="button"]').length > 0""",
+                        timeout=10000,
+                    )
+                    self._ensure_app_language()
+                except Exception:
+                    pass
+                console.print(f"[green]已处于登录状态（URL: {url}）[/green]")
+                return True
 
             # SPA 应用首次加载需较长时间，等到登录表单的输入框真正可见
             email_selector = (
@@ -615,6 +1014,9 @@ class BrowserExecutor:
             )
             console.print("[dim]等待登录表单加载...[/dim]")
             if not self.wait_for_selector(email_selector, state="visible", timeout=30000):
+                if self._looks_authenticated():
+                    console.print(f"[green]已处于登录状态（URL: {self.get_url()}）[/green]")
+                    return True
                 console.print("[red]登录表单未在 30 秒内加载[/red]")
                 self.screenshot("login_no_form")
                 return False
@@ -635,15 +1037,22 @@ class BrowserExecutor:
 
             # 等待登录完成：URL 离开登录页 或 出现已登录后才有的元素
             try:
-                self._page.wait_for_url(
-                    lambda url: "/login" not in url and "/register" not in url,
+                self._page.wait_for_function(
+                    """() => {
+                        const path = location.pathname.toLowerCase();
+                        if (path === '/login' || path === '/register') return false;
+                        const text = document.body ? document.body.innerText : '';
+                        return text.includes('Add Project') ||
+                            text.includes('Dashboard') ||
+                            !!document.querySelector("aside,[class*='Sidebar'],button[title='Settings']");
+                    }""",
                     timeout=10000,
                 )
             except Exception:
                 self.sleep(3)  # 兜底等待
 
             url     = self.get_url()
-            success = "/login" not in url and "/register" not in url
+            success = self._looks_authenticated()
             if success:
                 self._page.wait_for_function(
                     """() => document.body.innerText.trim().length > 0
@@ -765,11 +1174,18 @@ class BrowserExecutor:
                     success = True
 
             elif action in ("wait", "sleep"):
-                secs = float(value) if value else 2.0
-                if secs >= 3:
-                    console.print(f"  [dim]等待 {secs:.0f} 秒...（非卡死，请耐心等待）[/dim]")
-                self.sleep(secs)
-                success = True
+                secs = self._normalize_wait_seconds(value)
+                if action == "wait" and target:
+                    timeout_ms = max(1, int(secs * 1000))
+                    console.print(f"  [dim]等待元素出现，最长 {secs:.1f} 秒: {target}[/dim]")
+                    success = self._find(target, timeout=timeout_ms) is not None
+                    if not success:
+                        error_msg = f"等待元素超时: {target}"
+                else:
+                    if secs >= 3:
+                        console.print(f"  [dim]等待 {secs:.1f} 秒...（非卡死，请耐心等待）[/dim]")
+                    self.sleep(secs)
+                    success = True
 
             elif action == "press":
                 success = self.press_key(value or target)
@@ -795,7 +1211,7 @@ class BrowserExecutor:
 
     # ── 私有：多策略元素查找 ──────────────────────────────────────────────────
 
-    def _locate_visible_css(self, scope, selector: str, timeout: int):
+    def _locate_one_css(self, scope, selector: str, timeout: int):
         """在所有匹配 CSS 选择器的元素中，返回第一个可见的。避免旧版本
         wait_for_selector(state='visible')→新版本 element_handle() 的可见性检查缺失。"""
         try:
@@ -812,12 +1228,30 @@ class BrowserExecutor:
             pass
         return None
 
+    def _locate_visible_css(self, scope, selector: str, timeout: int):
+        """
+        CSS 定位（带 selector 归一化兜底）：先试原始选择器，再试 expand_selector
+        给出的鲁棒变体（如把哈希化的 CSS Module 类名 .Card_card__container 扩展成
+        [class*='Card_card__container']）。任一变体命中即返回。
+        """
+        from task2_agent.stability import expand_selector
+        for cand in expand_selector(selector):
+            el = self._locate_one_css(scope, cand, timeout)
+            if el:
+                return el
+        return None
+
     def _visible_dialog_or_page(self):
-        """返回可见弹窗的 Locator，若无弹窗则返回 page。用于消歧同名按钮。"""
-        DIALOG_SEL = (
-            "[role='dialog'], [role='alertdialog'], dialog, "
-            "[class*='Popup' i], [class*='Modal' i], [class*='Dialog' i]"
-        )
+        """
+        返回当前真实打开的弹窗 Locator；没有则返回 page。
+
+        重要：只认「明确的对话框」——role=dialog / role=alertdialog / <dialog> 元素。
+        不再把 [class*=Popup]/[class*=Modal] 这类**常驻挂载**的组件当成弹窗 scope，
+        否则真实看板页（Add List / Add Card / Card_wrapper 都在页面上、并无弹窗打开）
+        会被误判成「在弹窗内」，导致 _find 只在错误 scope 里找、真实元素反而找不到。
+        （4ga Boards 的 Add Board 弹窗是 role=dialog，仍能被正确识别并优先。）
+        """
+        DIALOG_SEL = "[role='dialog'], [role='alertdialog'], dialog"
         try:
             loc = self._page.locator(DIALOG_SEL)
             for i in range(min(loc.count(), 5)):
@@ -834,64 +1268,45 @@ class BrowserExecutor:
     def _find(self, selector: str, timeout: int = None):
         """
         多策略元素查找（分层 + deadline 控制）。
-        - 快速层 timeout: 150-250ms（精确匹配优先）
-        - 慢速层 timeout: 500-800ms（模糊匹配兜底）
+        - 有真实对话框（role=dialog）时优先在对话框内找；
+        - **但无论是否在对话框内，都必须回退到整页查找**，避免把元素“找丢”。
         - 全函数受 deadline 控制（默认 5s），避免坏 selector 拖垮全量执行。
-        - 有弹窗时优先在弹窗内查找（保留原有消歧逻辑）。
         """
         deadline = time.time() + (timeout or min(self.timeout, 5000)) / 1000
         page = self._page
-        scope = self._visible_dialog_or_page()
-        in_dialog = scope is not page
+        dialog = self._visible_dialog_or_page()
+        has_dialog = dialog is not page
 
         looks_like_css = any(c in selector for c in "[].#>:") or selector.startswith(
             ("input", "button", "div", "span", "a[", "form")
         )
 
-        # ── 快速层（精确匹配，150-250ms）─────────────────────────────────
-        fast_strategies = []
-        if looks_like_css:
-            fast_strategies.append(lambda: self._locate_visible_css(scope, selector, 250))
-        fast_strategies.extend([
-            lambda: scope.get_by_role("button", name=selector).first.element_handle(timeout=250),
-            lambda: scope.get_by_role("link", name=selector).first.element_handle(timeout=250),
-            lambda: scope.get_by_role("menuitem", name=selector).first.element_handle(timeout=250),
-            lambda: scope.get_by_placeholder(selector).first.element_handle(timeout=250),
-        ])
-
-        # ── 慢速层（模糊匹配，500-800ms）─────────────────────────────────
-        slow_strategies = []
-        # CSS selector 兜底（用更长的 timeout 再试一次）
-        if looks_like_css:
-            slow_strategies.append(lambda: self._locate_visible_css(scope, selector, 800))
-        slow_strategies.extend([
-            lambda: scope.get_by_role("button", name=selector).first.element_handle(timeout=600),
-            lambda: scope.get_by_role("link", name=selector).first.element_handle(timeout=600),
-            lambda: scope.get_by_role("menuitem", name=selector).first.element_handle(timeout=600),
-            lambda: scope.locator("button:has-text('" + selector + "')").first.element_handle(timeout=600),
-            lambda: scope.locator("a:has-text('" + selector + "')").first.element_handle(timeout=600),
-            lambda: scope.get_by_text(selector, exact=False).first.element_handle(timeout=800),
-        ])
-
-        # 对话框内的兜底（submit 类按钮）
-        if in_dialog:
-            slow_strategies.append(
-                lambda: scope.locator("button[type='submit']").first.element_handle(timeout=600)
-            )
-
-        # 非弹窗时才做全页面兜底（避免弹窗外同名按钮干扰）
-        if not in_dialog:
-            slow_strategies.extend([
-                lambda: page.get_by_role("button", name=selector).first.element_handle(timeout=600),
-                lambda: page.get_by_role("link", name=selector).first.element_handle(timeout=600),
-                lambda: page.get_by_role("menuitem", name=selector).first.element_handle(timeout=600),
-                lambda: page.locator("[aria-label='" + selector + "' i]").first.element_handle(timeout=600),
-                lambda: page.locator("[placeholder*='" + selector + "' i]").first.element_handle(timeout=600),
-                lambda: page.locator("[title='" + selector + "' i]").first.element_handle(timeout=600),
-                lambda: page.get_by_text(selector, exact=False).first.element_handle(timeout=800),
+        def strategies_for(root, css_timeout: int, role_timeout: int):
+            out = []
+            if looks_like_css:
+                out.append(lambda: self._locate_visible_css(root, selector, css_timeout))
+            out.extend([
+                lambda: root.get_by_role("button",   name=selector).first.element_handle(timeout=role_timeout),
+                lambda: root.get_by_role("link",     name=selector).first.element_handle(timeout=role_timeout),
+                lambda: root.get_by_role("menuitem", name=selector).first.element_handle(timeout=role_timeout),
+                lambda: root.get_by_placeholder(selector).first.element_handle(timeout=role_timeout),
+                lambda: root.locator("button:has-text('" + selector + "')").first.element_handle(timeout=role_timeout),
+                lambda: root.locator("a:has-text('" + selector + "')").first.element_handle(timeout=role_timeout),
+                lambda: root.locator("[aria-label='" + selector + "' i]").first.element_handle(timeout=role_timeout),
+                lambda: root.locator("[title='" + selector + "' i]").first.element_handle(timeout=role_timeout),
+                lambda: root.get_by_text(selector, exact=False).first.element_handle(timeout=role_timeout),
             ])
+            return out
 
-        for strategy in fast_strategies + slow_strategies:
+        ordered = []
+        # 1) 有真实对话框：先在对话框内精确找
+        if has_dialog:
+            ordered += strategies_for(dialog, 250, 300)
+            ordered.append(lambda: dialog.locator("button[type='submit']").first.element_handle(timeout=400))
+        # 2) 整页查找（始终执行——这是关键的兜底，修复“弹窗 scope 误判导致找不到”）
+        ordered += strategies_for(page, 300, 700)
+
+        for strategy in ordered:
             if time.time() > deadline:
                 break
             try:

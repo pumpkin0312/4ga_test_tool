@@ -1,0 +1,54 @@
+{
+  "id": "5f2b1c9e8a1b2c3d4e5f6a7b",
+  "name": "Trello Import Test Board",
+  "desc": "Fixture board used by the automated import test (f012_s01).",
+  "closed": false,
+  "prefs": {
+    "permissionLevel": "private",
+    "backgroundColor": "#0079BF"
+  },
+  "labelNames": {
+    "green": "Done",
+    "yellow": "In Progress",
+    "red": "Blocked"
+  },
+  "labels": [
+    { "id": "l1", "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b", "name": "Done", "color": "green" },
+    { "id": "l2", "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b", "name": "In Progress", "color": "yellow" },
+    { "id": "l3", "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b", "name": "Blocked", "color": "red" }
+  ],
+  "lists": [
+    { "id": "list_todo", "name": "To Do", "closed": false, "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b", "pos": 16384 },
+    { "id": "list_doing", "name": "Doing", "closed": false, "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b", "pos": 32768 },
+    { "id": "list_done", "name": "Done", "closed": false, "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b", "pos": 49152 }
+  ],
+  "cards": [
+    {
+      "id": "card_1", "name": "Set up project", "desc": "Initialize the repository and CI.",
+      "closed": false, "idList": "list_todo", "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b",
+      "pos": 16384, "idLabels": ["l2"], "idChecklists": [], "idMembers": []
+    },
+    {
+      "id": "card_2", "name": "Write tests", "desc": "Add unit tests for the importer.",
+      "closed": false, "idList": "list_doing", "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b",
+      "pos": 16384, "idLabels": ["l2"], "idChecklists": ["chk_1"], "idMembers": []
+    },
+    {
+      "id": "card_3", "name": "Ship v1", "desc": "Release the first version.",
+      "closed": false, "idList": "list_done", "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b",
+      "pos": 16384, "idLabels": ["l1"], "idChecklists": [], "idMembers": []
+    }
+  ],
+  "checklists": [
+    {
+      "id": "chk_1", "idBoard": "5f2b1c9e8a1b2c3d4e5f6a7b", "idCard": "card_2", "name": "Test coverage",
+      "checkItems": [
+        { "id": "ci_1", "idChecklist": "chk_1", "name": "Happy path", "state": "complete", "pos": 16384 },
+        { "id": "ci_2", "idChecklist": "chk_1", "name": "Edge cases", "state": "incomplete", "pos": 32768 }
+      ]
+    }
+  ],
+  "actions": [],
+  "members": [],
+  "checkItemStates": []
+}

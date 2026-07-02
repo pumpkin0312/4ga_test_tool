@@ -85,71 +85,18 @@ class Planner:
                       username: str,
                       password: str) -> list[dict]:
         """
-        在场景步骤前自动插入：导航 + 登录 + （按需）进入项目 + （按需）打开看板。
-        前置深度根据 scenario.precondition 的文字推断：
-          - "已登录页面" / "未登录"      → 只 navigate，不 login（让场景自己测登录）
-          - precondition 含"项目"        → navigate + login + 进入第一个项目
-          - precondition 含"看板/列表/卡片" → navigate + login + 进项目 + 开看板
-          - 默认                         → navigate + login（停在 dashboard）
+        在场景步骤前自动插入导航 / 登录 / 进入项目 / 打开看板 / 打开 Settings，并对
+        场景步骤做稳定化改写（固定项目/看板名 → 动态导航），最后折叠重复的自动导航。
+
+        具体规则见 task2_agent.stability.plan_steps（纯函数，便于单测）：
+          - "已登录页面" / "未登录"        → 只 navigate，不 login（让场景自己测登录）
+          - precondition/名称含"设置/密码/邮箱" → navigate + login + 打开 Settings 弹窗
+          - precondition 含"项目"          → navigate + login + 进入第一个项目
+          - precondition 含"看板/列表/卡片"  → navigate + login + 进项目 + 开看板
+          - 默认                           → navigate + login（停在 dashboard）
         """
-        precondition = (scenario.get("precondition") or "").lower()
-        first_step_target = ""
-        if scenario.get("steps"):
-            first_step_target = (scenario["steps"][0].get("target") or "").lower()
-
-        is_login_test = any(self._contains_keyword(precondition, kw) for kw in self._LOGIN_TEST_KW) or \
-                        any(kw in first_step_target for kw in
-                            ["input[name='emailorusername']", "input[type='password']",
-                             "input[type='email']"])
-        needs_board   = any(self._contains_keyword(precondition, kw) for kw in self._BOARD_KW)
-        needs_project = needs_board or any(self._contains_keyword(precondition, kw) for kw in self._PROJECT_KW)
-
-        steps: list[dict] = []
-
-        # ① 打开应用（永远需要）
-        steps.append({
-            "action":      "navigate",
-            "target":      app_url,
-            "value":       app_url,
-            "description": f"打开目标应用 {app_url}",
-            "_auto":       True,
-        })
-
-        # ② 登录（登录测试场景跳过）
-        if not is_login_test:
-            steps.append({
-                "action":      "login",
-                "target":      "login_form",
-                "value":       f"{username}|{password}",
-                "description": f"使用账号 {username} 登录",
-                "_auto":       True,
-            })
-
-        # ③ 进入第一个项目（场景需要项目/看板/列表/卡片视图）
-        if needs_project and not is_login_test:
-            steps.append({
-                "action":      "enter_first_project",
-                "target":      "",
-                "value":       "",
-                "description": "从仪表板进入第一个项目",
-                "_auto":       True,
-            })
-
-        # ④ 打开第一个看板（场景需要看板/列表/卡片视图）
-        if needs_board and not is_login_test:
-            steps.append({
-                "action":      "open_first_board",
-                "target":      "",
-                "value":       "",
-                "description": "打开第一个看板",
-                "_auto":       True,
-            })
-
-        # ⑤ 场景本身的步骤
-        for s in scenario.get("steps", []):
-            steps.append(dict(s))
-
-        return steps
+        from task2_agent.stability import plan_steps
+        return plan_steps(scenario, app_url, username, password)
 
     def get_alternatives(self,
                          scenario_name: str,

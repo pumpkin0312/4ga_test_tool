@@ -42,6 +42,32 @@ st.markdown("""
 
 # ── 工具函数 ──────────────────────────────────────────────────────────────────
 
+def _st_plotly(fig):
+    """Streamlit 版本兼容：新版用 width='stretch'，旧版用 use_container_width=True。"""
+    try:
+        st.plotly_chart(fig, width="stretch")
+    except TypeError:
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def _st_dataframe(df):
+    try:
+        st.dataframe(df, width="stretch")
+    except TypeError:
+        st.dataframe(df, use_container_width=True)
+
+
+def _st_image(col, path):
+    # width='stretch' 是新版 API；use_container_width / use_column_width 是旧版
+    try:
+        col.image(path, width="stretch")
+    except TypeError:
+        try:
+            col.image(path, use_container_width=True)
+        except TypeError:
+            col.image(path, use_column_width=True)
+
+
 def load_json(path: str):
     p = Path(path)
     if p.exists():
@@ -55,15 +81,23 @@ def save_cfg(cfg: dict):
         json.dump(cfg, f)
 
 def load_cfg() -> dict:
-    from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, LLM_MODEL
+    from config import (
+        DEEPSEEK_API_KEY,
+        DEEPSEEK_BASE_URL,
+        LLM_MODEL,
+        TARGET_APP_URL,
+        DOCS_BASE_URL,
+        DEMO_USERNAME,
+        DEMO_PASSWORD,
+    )
 
     defaults = dict(
         api_key="" if DEEPSEEK_API_KEY.startswith("your-") else DEEPSEEK_API_KEY,
         base_url=DEEPSEEK_BASE_URL,
         model=LLM_MODEL,
-        app_url="https://demo.4gaboards.com",
-        docs_url="https://docs.4gaboards.com",
-        username="demo@demo.demo", password="demo",
+        app_url=TARGET_APP_URL,
+        docs_url=DOCS_BASE_URL,
+        username=DEMO_USERNAME, password=DEMO_PASSWORD,
         headless=True, max_steps=20,
         page_aware=True,
     )
@@ -421,6 +455,20 @@ def tab_execute(cfg: dict):
             to_run = scenarios
             st.caption(f"将执行全部 {len(scenarios)} 个场景")
 
+    # 破坏性场景保护：默认跳过会污染共享 demo 账号的场景（改密码/邮箱/删除等）
+    from task2_agent.stability import is_destructive_scenario
+    destructive = [s for s in to_run if is_destructive_scenario(s)]
+    skip_destructive = st.checkbox(
+        f"🛡️ 跳过高风险破坏性场景（{len(destructive)} 个：改密码/邮箱/用户名、删除项目/看板/列表/卡片）",
+        value=True,
+        help="这些场景会修改或删除共享 demo 数据，污染后续场景。默认跳过以保护 demo 环境；"
+             "取消勾选可强制执行（不建议在共享 demo 上默认全量跑）。",
+    )
+    if skip_destructive and destructive:
+        skipped_ids = {id(s) for s in destructive}
+        to_run = [s for s in to_run if id(s) not in skipped_ids]
+        st.caption(f"已跳过 {len(destructive)} 个破坏性场景，实际将执行 {len(to_run)} 个。")
+
     disabled = not cfg["api_key"] or not to_run
     btn_col1, btn_col2 = st.columns([3, 1])
     with btn_col1:
@@ -495,6 +543,10 @@ def _do_execute(cfg: dict, scenarios: list):
 
 def _render_reports():
     """展示历史测试报告"""
+    from task2_agent.result_utils import (
+        summarize, classify_failure_reason, failed_actions, REASON_PASS,
+    )
+
     st.subheader("📊 历史报告")
     report_dir = Path("reports")
     if not report_dir.exists():
@@ -511,18 +563,47 @@ def _render_reports():
     if not data:
         return
 
-    # 摘要指标
-    total  = len(data)
-    passed = sum(1 for r in data if r.get("result") == "PASS")
-    rate   = passed / total if total else 0
+    # ── 摘要指标：PASS / FAIL / ERROR / BLOCKED + 功能通过率 ────────────────────
+    s   = summarize(data)
+    cat = s["by_category"]
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1.metric("总场景",   s["total"])
+    c2.metric("✅ PASS",  cat["PASS"])
+    c3.metric("❌ FAIL",  cat["FAIL"])
+    c4.metric("⚠️ ERROR", cat["ERROR"])
+    c5.metric("🚧 BLOCKED", cat["BLOCKED"])
+    c6.metric("功能通过率", f"{s['pass_rate']:.0%}")
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("总场景", total)
-    c2.metric("通过",   passed)
-    c3.metric("失败",   total - passed)
-    c4.metric("通过率", f"{rate:.0%}")
+    # ── 失败原因分类统计 ───────────────────────────────────────────────────────
+    if s["by_reason"]:
+        st.markdown("**失败原因分类**")
+        reason_cols = st.columns(len(s["by_reason"]))
+        for col, (reason, n) in zip(
+            reason_cols, sorted(s["by_reason"].items(), key=lambda x: -x[1])
+        ):
+            col.metric(reason, n)
 
-    # 图表
+    # ── HTML 报告下载 ──────────────────────────────────────────────────────────
+    dl1, dl2 = st.columns([1, 3])
+    with dl1:
+        gen = st.button("🌐 生成 HTML 报告", help="生成自包含 HTML（含截图），生成后可下载")
+    if gen:
+        from task2_agent.html_report import render_html_report
+        with st.spinner("正在生成 HTML 报告（内嵌截图，可能需要几秒）..."):
+            html_text = render_html_report(data, title=f"4ga Boards 测试报告 · {selected}")
+        st.session_state["html_report"] = html_text
+        st.session_state["html_report_name"] = selected
+    if (st.session_state.get("html_report")
+            and st.session_state.get("html_report_name") == selected):
+        with dl2:
+            st.download_button(
+                "⬇️ 下载 HTML 报告",
+                data=st.session_state["html_report"].encode("utf-8"),
+                file_name=selected.replace(".json", ".html"),
+                mime="text/html",
+            )
+
+    # ── 图表 ───────────────────────────────────────────────────────────────────
     try:
         import pandas as pd
         import plotly.express as px
@@ -533,24 +614,65 @@ def _render_reports():
         } for r in data])
         fig = px.bar(
             df, x="场景", y="步骤成功率", color="结果",
-            color_discrete_map={"PASS": "#27ae60", "FAIL": "#e74c3c", "ERROR": "#e67e22"},
+            color_discrete_map={"PASS": "#27ae60", "FAIL": "#e74c3c",
+                                "ERROR": "#e67e22", "BLOCKED": "#2980b9"},
             title="各场景步骤成功率", height=280,
         )
         fig.update_layout(margin=dict(l=0, r=0, t=36, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        _st_plotly(fig)
     except ImportError:
         pass
 
-    # 详细结果
+    # ── 详细结果 ───────────────────────────────────────────────────────────────
     st.subheader("场景详情")
+    icon_map = {"PASS": "✅", "FAIL": "❌", "ERROR": "⚠️", "BLOCKED": "🚧"}
     for r in data:
-        icon  = "✅" if r.get("result") == "PASS" else "❌"
-        label = r.get("result","")
+        label = r.get("result", "")
+        icon  = icon_map.get(label, "❓")
+        reason = classify_failure_reason(r)
+        reason_tag = "" if reason == REASON_PASS else f"  ·  {reason}"
         with st.expander(
-            f"{icon} {r.get('scenario_name','')}  [{label}]  "
+            f"{icon} {r.get('scenario_name','')}  [{label}]{reason_tag}  "
             f"步骤 {r.get('steps_passed',0)}/{r.get('steps_total',0)}"
         ):
             st.markdown(f"**结论：** {r.get('summary','')}")
+
+            # 关键指标：inline 规则验证通过率 / 步骤成功率 / LLM 置信度
+            inline_rate = r.get("inline_pass_rate")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("规则验证通过率",
+                      f"{inline_rate:.0%}" if isinstance(inline_rate, (int, float)) else "—")
+            m2.metric("步骤成功率", f"{r.get('step_success_rate',0):.0%}")
+            m3.metric("LLM 置信度",
+                      f"{r.get('confidence',0):.0%}" if isinstance(r.get('confidence'), (int, float)) else "—")
+
+            # 失败步骤：action / target / error_msg
+            fails = failed_actions(r)
+            if fails:
+                st.markdown("**❌ 失败步骤**")
+                try:
+                    import pandas as pd
+                    fdf = pd.DataFrame([{
+                        "#":       a.get("step_index", ""),
+                        "action":  a.get("action", ""),
+                        "target":  a.get("target", ""),
+                        "错误信息": a.get("error_msg", "") or a.get("description", ""),
+                    } for a in fails])
+                    _st_dataframe(fdf)
+                except ImportError:
+                    for a in fails:
+                        st.markdown(
+                            f"- `{a.get('action','')}` → `{a.get('target','')}`  "
+                            f"— {a.get('error_msg','') or a.get('description','')}"
+                        )
+
+            # 恢复步骤 recovered_steps
+            recovered = r.get("recovered_steps", [])
+            if recovered:
+                st.success("**🔧 靠备选方案恢复成功的步骤**\n" + "\n".join(
+                    f"- 步骤 {rc.get('step_index','')}：{rc.get('description','')}"
+                    for rc in recovered
+                ))
 
             if r.get("issues"):
                 st.warning("**发现问题**\n" + "\n".join(f"- {i}" for i in r["issues"]))
@@ -577,19 +699,14 @@ def _render_reports():
                     unsafe_allow_html=True,
                 )
 
-            # 截图：直接展开显示，不再嵌套 expander
+            # 截图
             shots = r.get("screenshots", [])
             if shots:
                 st.markdown(f"**🖼️ 截图（{len(shots)} 张，最多显示 9 张）**")
                 cols = st.columns(min(len(shots), 3))
                 for j, path in enumerate(shots[:9]):
                     if Path(path).exists():
-                        # Bug-27: 兼容两个 Streamlit 版本
-                        # use_container_width 是 1.36+ 的新 API；use_column_width 是 1.36 之前的旧 API
-                        try:
-                            cols[j % 3].image(path, use_container_width=True)
-                        except TypeError:
-                            cols[j % 3].image(path, use_column_width=True)
+                        _st_image(cols[j % 3], path)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -690,7 +807,7 @@ def tab_graph():
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             title="🕸️ Category → Feature → Scenario → Step",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        _st_plotly(fig)
     except Exception as e:
         st.warning(f"图谱可视化失败：{e}")
 

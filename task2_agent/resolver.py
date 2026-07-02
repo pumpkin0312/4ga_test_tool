@@ -28,7 +28,9 @@ console = Console(legacy_windows=False)
 _NO_RESOLVE_ACTIONS = {
     "navigate", "wait", "sleep", "press",
     "setinputfiles", "set_input_files", "upload", "upload_file",
-    "login", "enter_first_project", "open_first_board",  # planner 注入的虚拟动作
+    "login", "enter_first_project", "open_first_board", "open_settings",
+    "open_project_settings", "ensure_list_exists", "ensure_card_exists",
+    "open_first_card",  # planner 注入的虚拟动作
 }
 
 

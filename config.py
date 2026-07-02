@@ -18,15 +18,15 @@ GLM_API_KEY  = DEEPSEEK_API_KEY
 GLM_BASE_URL = DEEPSEEK_BASE_URL
 
 # ── 目标应用 ───────────────────────────────────────────────
-TARGET_APP_URL = "https://demo.4gaboards.com"
-DOCS_BASE_URL  = "https://docs.4gaboards.com"
+TARGET_APP_URL = os.getenv("TARGET_APP_URL", "https://demo.4gaboards.com")
+DOCS_BASE_URL  = os.getenv("DOCS_BASE_URL", "https://docs.4gaboards.com")
 
 # 本地完整文档目录（推荐使用）。网络爬取作为 fallback。
 LOCAL_DOCS_DIR = "4gaboards_doc/4gaboards"
 
-# 演示账号（4ga Boards demo 站点默认账号）
-DEMO_USERNAME = "demo@demo.demo"
-DEMO_PASSWORD = "demo"
+# 演示账号（4ga Boards demo 站点是共享环境，密码可能被测试场景改动）
+DEMO_USERNAME = os.getenv("DEMO_USERNAME", "demo@demo.demo")
+DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "demo")
 
 # 浏览器与目标应用语言。demo 账号是共享账号，语言偏好可能被别人改动；
 # 测试时强制英文，避免 selector 文本和文档语言不一致。

@@ -82,6 +82,24 @@ class TestAgent:
         mem = self.memory.new_session(sid, sname)
         mem.log(f"开始执行: {sname}")
 
+        # ── 0. 前置阻塞检查：缺测试数据等无法执行的场景，直接标 BLOCKED（不算产品失败）──
+        from task2_agent.result_utils import detect_blocked_reason
+        blocked_reason = detect_blocked_reason(scenario)
+        if blocked_reason:
+            mem.log(f"场景被阻塞，跳过执行: {blocked_reason}")
+            console.print(f"  [yellow]BLOCKED: {blocked_reason}[/yellow]")
+            mem.end_time = datetime.now().isoformat()
+            result = self._build_result(scenario, mem, {
+                "result": "BLOCKED", "confidence": 0,
+                "summary": blocked_reason,
+                "expectation_results": [], "issues": [blocked_reason],
+                "suggestions": ["补齐所需测试数据文件，或在演示时排除该场景"],
+            })
+            result["expectations_inline"] = []
+            result["inline_pass_rate"] = 0
+            result["logs"] = mem.logs
+            return result
+
         # ── 1. 规划：生成完整步骤序列 ─────────────────────────────────────────
         steps = self.planner.prepare_steps(
             scenario, self.app_url, self.username, self.password
@@ -135,17 +153,29 @@ class TestAgent:
 
                 # 非自动前置步骤失败 → 向 Planner 请求一次备选（只试一次，避免无限滚雪球）
                 if not success and not step.get("_auto"):
-                    console.print(f"  [yellow]步骤 {i+1} 失败，请求备选方案...[/yellow]")
-                    visible = self.executor.list_clickable_texts(limit=40)
-                    alternatives = self.planner.get_alternatives(
-                        sname, executed_steps, step,
-                        mem.current_url, error,
-                        visible_texts=visible,
-                    )
-                    actionable = [
-                        a for a in alternatives
-                        if a.get("action", "").lower() not in ("wait", "sleep")
-                    ]
+                    failed_ctx = ((step.get("target", "") or "") + " " +
+                                  (step.get("description", "") or "")).lower()
+                    is_cancel_step = any(k in failed_ctx for k in
+                                         ("cancel", "取消", "关闭", "close", "discard", "放弃"))
+
+                    if is_cancel_step:
+                        # 取消类步骤失败：禁止 fallback 到 Save/Create/Add 等相反操作；
+                        # 只用 Escape 兜底关闭表单，绝不把“取消”做成“保存”。
+                        console.print(f"  [yellow]步骤 {i+1}(取消) 失败，用 Escape 兜底，不 fallback 到保存类操作[/yellow]")
+                        actionable = [{"action": "press", "target": "", "value": "Escape",
+                                       "description": "按 Escape 取消（禁止 Save fallback）"}]
+                    else:
+                        console.print(f"  [yellow]步骤 {i+1} 失败，请求备选方案...[/yellow]")
+                        visible = self.executor.list_clickable_texts(limit=40)
+                        alternatives = self.planner.get_alternatives(
+                            sname, executed_steps, step,
+                            mem.current_url, error,
+                            visible_texts=visible,
+                        )
+                        actionable = [
+                            a for a in alternatives
+                            if a.get("action", "").lower() not in ("wait", "sleep")
+                        ]
                     if actionable:
                         alt = actionable[0]               # 只尝试第一个，避免链式失败拖时间
                         # 备选方案也经过 Resolver 校验，确保 target 匹配真实 DOM
@@ -212,17 +242,56 @@ class TestAgent:
         console.print("  [dim]LLM 综合验证...[/dim]")
         verify_result = self.verifier.verify_with_llm(scenario, mem, inline_results=inline_results)
 
-        # 兜底：若规则验证全部 false，强制降级为 FAIL（防止 LLM 看着步骤通过率拍 PASS）
-        if inline_results and all(not r.get("inline_pass") for r in inline_results):
-            if verify_result.get("result") == "PASS":
-                verify_result["result"]  = "FAIL"
-                verify_result["summary"] = "（强制降级）所有规则验证均未通过：" + verify_result.get("summary", "")
-                console.print("  [red]规则验证全部失败，强制将结果降级为 FAIL[/red]")
+        # 强制降级：即使 LLM 判 PASS，规则验证通过率低于 FORCE_FAIL_THRESHOLD 时改判 FAIL
+        # （防止 LLM 看着步骤通过率拍 PASS、忽略真实功能失败）
+        from task2_agent.verifier import decide_result
+        before = verify_result.get("result")
+        verify_result = decide_result(verify_result, inline_results)
+        if before == "PASS" and verify_result.get("result") == "FAIL":
+            console.print(
+                f"  [red]规则验证通过率 {verify_result.get('inline_pass_rate', 0):.0%} "
+                f"低于阈值，强制将结果降级为 FAIL[/red]"
+            )
+
+        # 取消类场景防假通过：必须确认「表单/弹窗曾经打开且临时值曾经输入」。
+        # 若既没有成功的输入动作、关键步骤也失败，则不允许仅因“目标名称不可见”而 PASS。
+        if self._is_cancel_scenario(scenario) and verify_result.get("result") == "PASS":
+            form_input_ok = any(
+                a.success and (a.action or "").lower() in ("input", "type", "fill")
+                for a in mem.actions
+            )
+            core_fail = any(
+                (not a.success) and not str(a.step_index).endswith("b")
+                for a in mem.actions
+            )
+            if not form_input_ok:
+                verify_result["result"] = "FAIL"
+                verify_result["summary"] = (
+                    "（取消场景防假通过）未确认表单/弹窗曾打开且临时值曾输入，"
+                    "无法证明‘取消’真实发生：" + verify_result.get("summary", "")
+                )
+                console.print("  [red]取消场景未确认表单曾打开/输入，强制判 FAIL（防假通过）[/red]")
+            elif core_fail:
+                verify_result["result"] = "FAIL"
+                verify_result["summary"] = (
+                    "（取消场景防假通过）存在失败的关键步骤，不能仅凭名称不可见判通过："
+                    + verify_result.get("summary", "")
+                )
+                console.print("  [red]取消场景关键步骤失败，强制判 FAIL（防假通过）[/red]")
 
         result = self._build_result(scenario, mem, verify_result)
         result["expectations_inline"] = inline_results
+        result["inline_pass_rate"] = verify_result.get("inline_pass_rate", 0)
         result["logs"] = mem.logs
         return result
+
+    @staticmethod
+    def _is_cancel_scenario(scenario: dict) -> bool:
+        """场景是否为「取消/放弃」类（取消创建、取消编辑、取消导入等）。"""
+        blob = ((scenario.get("name", "") or "") + " " +
+                (scenario.get("precondition", "") or "") + " " +
+                " ".join(scenario.get("tags", []))).lower()
+        return any(k in blob for k in ("取消", "cancel", "放弃", "discard", "不保存"))
 
     def run_scenarios(self,
                       scenarios:         list[dict],
@@ -273,6 +342,10 @@ class TestAgent:
             parts    = value.split("|") if "|" in value else []
             username = parts[0].strip() if parts else self.username
             password = parts[1].strip() if len(parts) > 1 else self.password
+            if username == self.username and password == "demo" and self.password != "demo":
+                # Generated scenarios often hard-code the old shared demo password.
+                # The configured password reflects the current real demo state.
+                password = self.password
 
             success  = self.executor.login(username, password)
             ss_path  = self.executor.screenshot(f"step_{idx_label}_login")
@@ -288,6 +361,32 @@ class TestAgent:
             success = self.executor.open_first_board()
             ss_path = self.executor.screenshot(f"step_{idx_label}_open_board")
             return success, ss_path, ("" if success else "打开看板失败")
+
+        if action == "open_settings":
+            section = (step.get("value") or "").strip() or None
+            success = self.executor.open_settings(section)
+            ss_path = self.executor.screenshot(f"step_{idx_label}_open_settings")
+            return success, ss_path, ("" if success else "打开设置失败")
+
+        if action == "open_project_settings":
+            success = self.executor.open_project_settings()
+            ss_path = self.executor.screenshot(f"step_{idx_label}_open_project_settings")
+            return success, ss_path, ("" if success else "打开项目设置失败")
+
+        if action == "ensure_list_exists":
+            success = self.executor.ensure_list_exists()
+            ss_path = self.executor.screenshot(f"step_{idx_label}_ensure_list")
+            return success, ss_path, ("" if success else "确保列表存在失败")
+
+        if action == "ensure_card_exists":
+            success = self.executor.ensure_card_exists()
+            ss_path = self.executor.screenshot(f"step_{idx_label}_ensure_card")
+            return success, ss_path, ("" if success else "确保卡片存在失败")
+
+        if action == "open_first_card":
+            success = self.executor.open_first_card()
+            ss_path = self.executor.screenshot(f"step_{idx_label}_open_card")
+            return success, ss_path, ("" if success else "打开卡片失败")
 
         return self.executor.execute_step(step, idx, take_screenshot=self.take_ss)
 
@@ -328,14 +427,24 @@ class TestAgent:
         console.print(f"\n[green]报告已保存: {path}[/green]")
 
     def _print_summary(self, results: list[dict]):
-        total  = len(results)
-        passed = sum(1 for r in results if r.get("result") == "PASS")
+        from task2_agent.result_utils import summarize
+        s = summarize(results)
+        cat = s["by_category"]
         console.rule("[bold]测试摘要[/bold]")
         t = Table()
         t.add_column("指标")
         t.add_column("数值", style="bold")
-        t.add_row("总场景数", str(total))
-        t.add_row("通过",     f"[green]{passed}[/green]")
-        t.add_row("失败",     f"[red]{total - passed}[/red]")
-        t.add_row("通过率",   f"{passed/total*100:.1f}%" if total else "0%")
+        t.add_row("总场景数", str(s["total"]))
+        t.add_row("通过 PASS",   f"[green]{cat['PASS']}[/green]")
+        t.add_row("失败 FAIL",   f"[red]{cat['FAIL']}[/red]")
+        t.add_row("错误 ERROR",  f"[yellow]{cat['ERROR']}[/yellow]")
+        t.add_row("阻塞 BLOCKED", f"[cyan]{cat['BLOCKED']}[/cyan]")
+        t.add_row("功能通过率",   f"{s['pass_rate']*100:.1f}%")
         console.print(t)
+        if s["by_reason"]:
+            rt = Table(title="失败原因分类")
+            rt.add_column("原因")
+            rt.add_column("场景数", style="bold")
+            for reason, n in sorted(s["by_reason"].items(), key=lambda x: -x[1]):
+                rt.add_row(reason, str(n))
+            console.print(rt)

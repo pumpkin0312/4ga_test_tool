@@ -13,9 +13,46 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from rich.console import Console
 
+import config
 from llm_client import LLMClient, DEFAULT_BASE_URL
 
 console = Console(legacy_windows=False)
+
+
+def inline_pass_rate(inline_results: list[dict] | None) -> float:
+    """规则验证通过率：inline_pass 为 true 的预期占比。无预期时返回 0.0。"""
+    if not inline_results:
+        return 0.0
+    passed = sum(1 for r in inline_results if r.get("inline_pass"))
+    return passed / len(inline_results)
+
+
+def decide_result(llm_result: dict,
+                  inline_results: list[dict] | None,
+                  force_fail_threshold: float = config.FORCE_FAIL_THRESHOLD) -> dict:
+    """
+    合并 LLM 综合判断与规则验证结果，得出最终 result。
+
+    策略（Bug-23 强制降级）：即使 LLM 给了 PASS，只要存在规则验证预期且
+    其通过率低于 force_fail_threshold，就强制改判 FAIL——避免 LLM 看着步骤
+    通过率拍 PASS、忽略真实功能失败。
+
+    - 只对 PASS 做降级；ERROR / FAIL 等其它结论原样保留。
+    - 无规则验证预期（inline_results 为空）时不降级：没有可据以推翻的证据。
+    - 返回 llm_result 的浅拷贝，附带计算出的 inline_pass_rate。
+    """
+    out = dict(llm_result)
+    rate = inline_pass_rate(inline_results)
+    out["inline_pass_rate"] = rate
+
+    if inline_results and out.get("result") == "PASS" and rate < force_fail_threshold:
+        out["result"] = "FAIL"
+        out["summary"] = (
+            f"（强制降级）规则验证通过率 {rate:.0%} 低于阈值 "
+            f"{force_fail_threshold:.0%}：" + out.get("summary", "")
+        )
+
+    return out
 
 
 VERIFY_PROMPT = """\
